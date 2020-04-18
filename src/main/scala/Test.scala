@@ -6,7 +6,9 @@ import org.json4s.native.Document
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.native.JsonMethods._
+
 import scala.io.Source.fromInputStream
+import scala.sys.process
 
 object Test {
 
@@ -17,7 +19,8 @@ object Test {
 
     val client = HttpClientBuilder.create().build()
     val httpUriRequest = new HttpPost(BASE_GHQL_URL)
-    httpUriRequest.addHeader("Authorization", "bearer a972582212ffa4468f99c0d1642703b480f4c892")
+    val token = sys.env("TOKEN")
+    httpUriRequest.addHeader("Authorization", "bearer "+token)
     httpUriRequest.addHeader("Accept", "application/json")
     val gqlReq = new StringEntity("{\"query\":\"" + temp + "\"}" )
     httpUriRequest.setEntity(gqlReq)
