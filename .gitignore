@@ -1,0 +1,7 @@
+/.gradle/*
+/gradle/
+/.idea/*
+/build/*
+/target/*
+/project/*
+pom.xmlg
