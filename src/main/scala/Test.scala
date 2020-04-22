@@ -1,3 +1,4 @@
+import QueryInfo.Empty
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.HttpClientBuilder
@@ -10,9 +11,19 @@ import org.json4s.native.JsonMethods._
 import scala.io.Source.fromInputStream
 import scala.sys.process
 
+
 object Test {
 
   def main(args: Array[String]): Unit = {
+
+    val query: QueryCommand = new QueryBuilder[QueryInfo.Empty]()
+      .addLanguage("java")
+      .addRepo("fakerepo")
+      .addCommits(3)
+      .build
+
+    println(query)
+
     val BASE_GHQL_URL = "https://api.github.com/graphql"
     val temp="{viewer {email login url}}"
     implicit val formats = DefaultFormats
@@ -32,9 +43,6 @@ object Test {
       case x if x != null => {
         val respJson = fromInputStream(x.getContent).getLines.mkString
         System.out.println(respJson)
-        //val viewer = parse(respJson).extract[Data]
-        //System.out.println(viewer)
-        //System.out.println(write(viewer))
       }
     }
   }
