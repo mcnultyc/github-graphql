@@ -39,8 +39,13 @@ object Test {
       case null => System.out.println("Response entity is null")
       case x if x != null => {
         val respJson = fromInputStream(x.getContent).getLines.mkString
-        val viewer = parse(respJson)
-        System.out.println(respJson)
+        //val viewer = parse(respJson)
+
+        val responseArray = respJson.split('{')
+        //val responseArray = respJson.split('[')
+
+        //System.out.println(respJson)
+        responseArray.foreach(println)
       }
     }
   }
