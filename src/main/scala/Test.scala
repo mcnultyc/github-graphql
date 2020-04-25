@@ -41,7 +41,7 @@ object Test {
         //val viewer = parse(respJson)
 
         val responseArray = respJson.split('{')
-
+        //val responseArray = respJson.split('[')
 
         //System.out.println(respJson)
         responseArray.foreach(println)
