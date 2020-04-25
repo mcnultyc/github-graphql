@@ -1,47 +1,44 @@
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
 import QueryInfo.Empty
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.HttpClientBuilder
-import org.json4s.DefaultFormats
-import org.json4s.native.Document
-import org.json4s._
-import org.json4s.JsonDSL._
-import org.json4s.native.JsonMethods._
 
 import scala.io.Source.fromInputStream
-import scala.sys.process
-
 
 object Test {
 
   def main(args: Array[String]): Unit = {
 
+
     val query: QueryCommand = new QueryBuilder[QueryInfo.Empty]()
-      .addLanguage("java")
-      .addRepo("fakerepo")
-      .addCommits(3)
+      .withRepos()
+      .withLanguages(List(LanguageInfo.NAME, LanguageInfo.COLOR))
+      .withStarGazers()
+      .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
       .build
 
-    println(query)
+
 
     val BASE_GHQL_URL = "https://api.github.com/graphql"
-    val temp="{viewer {email login url}}"
+    val temp: String = query.getQuery()
     implicit val formats = DefaultFormats
-
     val client = HttpClientBuilder.create().build()
     val httpUriRequest = new HttpPost(BASE_GHQL_URL)
     val token = sys.env("TOKEN")
     httpUriRequest.addHeader("Authorization", "bearer "+token)
     httpUriRequest.addHeader("Accept", "application/json")
+    //val gqlReq = new StringEntity("{\"query\":\"" + temp + "\", \"variables\":{\"limit\":3}}" )
     val gqlReq = new StringEntity("{\"query\":\"" + temp + "\"}" )
     httpUriRequest.setEntity(gqlReq)
-
     val response = client.execute(httpUriRequest)
     System.out.println("Response:" + response)
     response.getEntity match {
       case null => System.out.println("Response entity is null")
       case x if x != null => {
         val respJson = fromInputStream(x.getContent).getLines.mkString
+        val viewer = parse(respJson)
         System.out.println(respJson)
       }
     }
