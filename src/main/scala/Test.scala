@@ -17,6 +17,7 @@ object Test {
       .withLanguages(List(LanguageInfo.NAME, LanguageInfo.COLOR))
       .withStarGazers()
       .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
+      .withAuth(new GitHub)
       .build
 
 
