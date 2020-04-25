@@ -12,7 +12,7 @@ import org.apache.http.impl.client.HttpClientBuilder
 // Optional fields for commits
 object CommitInfo extends Enumeration{
   type CommitInfo = Value
-  val AUTHOR        = Value("author") // graph-ql field
+  val AUTHOR        = Value("author")       // graph-ql field
   val AUTHORED_DATE = Value("authoredDate")
   val MESSAGE       = Value("message")
   val CHANGED_FILES = Value("changedFiles")
@@ -51,8 +51,8 @@ sealed trait QueryInfo
 object QueryInfo{
 
   sealed trait Empty extends QueryInfo
-  sealed trait Auth  extends QueryInfo
-  sealed trait Repo  extends QueryInfo
+  sealed trait Auth  extends QueryInfo  // GitHub authorization token
+  sealed trait Repo  extends QueryInfo  // Repository/repositories query
 
   // Mandatory traits for query
   type MandatoryInfo = Empty with Auth with Repo
@@ -75,6 +75,11 @@ case class QueryBuilder[I <: QueryInfo](repo: String = "",
   }
 
   def withRepo(name: String): QueryBuilder[I with Repo] ={
+    this.copy(repo = name)
+  }
+
+  def withRepo(name: String, owner: String): QueryBuilder[I with Repo] = {
+    // TODO - allow to look up repo from another owner
     this.copy(repo = name)
   }
 
@@ -148,6 +153,20 @@ class QueryCommand(repo: String = "",
 
 
   private def createQuery(): String ={
+
+
+    val s = """query{viewer{ FIELDS: repositories{ FIELDS: }} } """
+    val t = """query{ repository{}}"""
+
+    val lst: Set[String] = LanguageInfo.values.map(x => x.toString)
+
+
+    println(lst)
+
+
+
+    val n = "nodes{ FIELDS GO HERE }pageInfo{endCursor hasNextPage}"
+
     var query = ""
     // Add root repo
     if(repo == ""){
