@@ -194,6 +194,7 @@ class QueryCommand(repo: String = "",
   private def parse(response: String): Unit ={
     // TODO - parse response string and extract data
     println(response)
+
   }
 
 
@@ -226,7 +227,7 @@ class QueryCommand(repo: String = "",
     // Add json for commits
     if(commitsInfo != null){
       val history = s" history(first:100){totalCount ${nodes(fields(commitsInfo))}}"
-      repoFields += s""" defaultBranchRef{target{... on Commit{$history}}}"""
+      repoFields += s" defaultBranchRef{target{... on Commit{$history}}}"
     }
     // Add json for issues
     if(issuesInfo != null){

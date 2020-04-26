@@ -4,6 +4,7 @@ import QueryInfo.Empty
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.HttpClientBuilder
+import org.json4s.native.JsonMethods
 
 import scala.io.Source.fromInputStream
 
@@ -27,7 +28,7 @@ object Test {
       .withLanguages()
       .build
 
-    /*
+
 
     val BASE_GHQL_URL = "https://api.github.com/graphql"
     val temp: String = query.getQuery()
@@ -46,7 +47,8 @@ object Test {
       case null => System.out.println("Response entity is null")
       case x if x != null => {
         val respJson = fromInputStream(x.getContent).getLines.mkString
-        //val viewer = parse(respJson)
+        val viewer = JsonMethods.parse(respJson).extract[Map[String,String]]
+
 
         val responseArray = respJson.split('{')
         //val responseArray = respJson.split('[')
@@ -55,6 +57,6 @@ object Test {
         responseArray.foreach(println)
       }
     }
-   */
+
   }
 }
