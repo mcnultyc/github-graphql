@@ -11,16 +11,24 @@ object Test {
 
   def main(args: Array[String]): Unit = {
 
+    val TOKEN = sys.env("TOKEN")
+    val ACCEPT = "Accept"
+    val APP_JSON = "application/json"
 
-    val query: QueryCommand = new QueryBuilder[QueryInfo.Empty]()
+    val github: GitHub = GitHubBuilder()
+      .withAuth(TOKEN)
+      .withHeaders(List((ACCEPT, APP_JSON)))
+      .build
+
+    val query: QueryCommand = QueryBuilder()
       .withRepos()
       .withLanguages(List(LanguageInfo.NAME, LanguageInfo.COLOR))
       .withStarGazers()
       .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
-      .withAuth(new GitHub)
+      .withAuth(github)
       .build
 
-
+    /*
 
     val BASE_GHQL_URL = "https://api.github.com/graphql"
     val temp: String = query.getQuery()
@@ -48,5 +56,6 @@ object Test {
         responseArray.foreach(println)
       }
     }
+   */
   }
 }

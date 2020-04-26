@@ -10,38 +10,34 @@ object GitHubInfo{
   type MandatoryInfo = Empty with Auth with Headers
 }
 
-case class GitHubBuilder[I <: GitHubInfo](/* TODO placeholder:*/ placeholder:String){
+case class GitHubBuilder[I <: GitHubInfo](token: String = "",
+                                          headers: List[(String, String)] = null){
 
   import GitHubInfo._
 
   // Required methods for github connection
 
   def withAuth(token: String): GitHubBuilder[I with Auth] ={
-    // TODO
-    this.copy()
+    this.copy(token = token)
   }
 
-  def withHeaders(headers: List[Map[String, String]]): GitHubBuilder[I with Headers] ={
-    // TODO
-    this.copy()
+  def withHeaders(headers: List[(String, String)]): GitHubBuilder[I with Headers] ={
+    this.copy(headers = headers)
   }
 
   // Builder method
   def build(implicit ev: I =:= MandatoryInfo): GitHub = {
-    // TODO
-    new GitHub
+    new GitHub(token, headers)
   }
 }
 
-class GitHub {
+class GitHub(token: String, headers: List[(String, String)]){
 
   def getToken(): String ={
-    // TODO might remove this method
-    ""
+    token
   }
 
-  def getHeaders(): String ={
-    // TODO
-    ""
+  def getHeaders(): List[(String, String)] ={
+    headers
   }
 }
