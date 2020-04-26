@@ -147,17 +147,13 @@ class QueryCommand(repo: String = "",
                    authorizer: GitHub = null){
 
   val query = createQuery()
+  println(query)
 
   // TODO - unfinished query method
   val response = execute(query)
 
   // TODO - unfinished parse method
   parse(response)
-
-
-  private def page(): Unit ={
-    // TODO - method to handle pagination for queries
-  }
 
 
   private def execute(query: String): String ={
@@ -167,7 +163,7 @@ class QueryCommand(repo: String = "",
     val BASE_GHQL_URL = "https://api.github.com/graphql"
 
     val client = HttpClientBuilder.create().build()
-    // Create HTTP entity with graph-ql query
+    // Create http entity with graph-ql query
     val entity = new StringEntity(s"""{"query":"$query"}""" )
     val request = new HttpPost(BASE_GHQL_URL)
 
@@ -177,9 +173,9 @@ class QueryCommand(repo: String = "",
       headers = ("Authorization", "bearer "+ authorizer.getToken()) :: headers
     }
 
-    // Set HTTP headers for request
+    // Set http headers for request
     headers.foreach(x => request.addHeader(x._1, x._2))
-    // Set HTTP entity for request
+    // Set http entity for request
     request.setEntity(entity)
 
     val response = client.execute(request)
@@ -229,7 +225,8 @@ class QueryCommand(repo: String = "",
     }
     // Add json for commits
     if(commitsInfo != null){
-      // TODO - not sure of graph-ql format for commits
+      val history = s" history(first:100){totalCount ${nodes(fields(commitsInfo))}}"
+      repoFields += s""" defaultBranchRef{target{... on Commit{$history}}}"""
     }
     // Add json for issues
     if(issuesInfo != null){

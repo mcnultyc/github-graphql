@@ -22,10 +22,9 @@ object Test {
 
     val query: QueryCommand = QueryBuilder()
       .withRepos()
-      .withLanguages(List(LanguageInfo.NAME, LanguageInfo.COLOR))
-      .withStarGazers()
-      .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
       .withAuth(github)
+      .withIssues()
+      .withLanguages()
       .build
 
     /*
