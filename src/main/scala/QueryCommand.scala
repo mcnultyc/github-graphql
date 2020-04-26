@@ -203,43 +203,57 @@ class QueryCommand(repo: String = "",
     val data = view.get("data").get.asInstanceOf[Map[String, Any]]
     val viewer = data.get("viewer").get.asInstanceOf[Map[String, Any]]
 
-    val authInfo = viewer.get("name")
+    val authInfo = viewer.get("name").get
     System.out.println("Auth Info: " + authInfo)
 
     //Getting the repositories
     val repos = viewer.get("repositories").get.asInstanceOf[Map[String, Any]]
-    val numRepos = repos.get("totalCount")
+    val numRepos = repos.get("totalCount").get.toString.toInt
     System.out.println("# of repos: " + numRepos)
 
     val nodes = repos.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
+    var repoNums = List[Int]()
 
-    for(element <- nodes){
-      println(element)
-    }
+    repoNums = repoNums.reverse
 
-    //-------------------------Onto the optional fields-------------------------------------
     var list1 = List[Map[String, Any]]()
 
     for(element<-nodes)
     {
-      //println(element)
       list1 = element.get("languages").get.asInstanceOf[Map[String, Any]] :: list1
+
     }
 
-    // print(list1)
-
-    var numLanguages = List[Any]()
+    var numLanguages = List[Int]()
 
     for(element<-list1){
-      numLanguages = element.get("totalCount") :: numLanguages
+      numLanguages = element.get("totalCount").get.toString.toInt :: numLanguages
     }
 
-    print("Number of Languages used in each repository: " + numLanguages)
+    println("Number of Languages used in each repository: " + numLanguages)
 
-    //val responseArray = respJson.split('{')
-    //responseArray.foreach(println)
+    var list2 = List[Map[String, Any]]()
 
-  }
+    for(element <- nodes){
+      list2 = element.get("issues").get.asInstanceOf[Map[String, Any]] :: list2
+    }
+
+    var numIssues = List[Int]()
+
+    for(element <- list2){
+      numIssues = element.get("totalCount").get.toString.toInt :: numIssues
+    }
+
+    println("Number of Issues in each repository: " + numIssues)
+
+    for( a <- 0 to numRepos-1){
+      val i = a + 1
+      println("Repo #" + i + " -> " + "Number of languages: " + numLanguages.lift(a).get + ", Number of issues: " + numIssues.lift(a).get)
+    }
+
+    //-------------------------Onto the optional fields-------------------------------------
+
+  }//End of parseResponse()
 
 
   private def createQuery(): String ={
