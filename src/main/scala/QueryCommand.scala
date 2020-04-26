@@ -3,7 +3,7 @@ import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.HttpClientBuilder
 import org.json4s.DefaultFormats
 import org.json4s._
-import org.json4s.jackson.JsonMethods._
+import org.json4s.jackson.JsonMethods.{parse, _}
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.HttpClientBuilder
@@ -153,7 +153,7 @@ class QueryCommand(repo: String = "",
   val response = execute(query)
 
   // TODO - unfinished parse method
-  parse(response)
+  parseResponse(response)
 
 
   private def execute(query: String): String ={
@@ -191,9 +191,54 @@ class QueryCommand(repo: String = "",
   }
 
 
-  private def parse(response: String): Unit ={
+  private def parseResponse(response: String): Unit ={
     // TODO - parse response string and extract data
     println(response)
+
+    implicit val formats = DefaultFormats
+
+    val view = parse(response).extract[Map[String, Any]]
+
+    //Getting Auth, which I suppose is the name of the owner? That's all I get in my JSON response
+    val data = view.get("data").get.asInstanceOf[Map[String, Any]]
+    val viewer = data.get("viewer").get.asInstanceOf[Map[String, Any]]
+
+    val authInfo = viewer.get("name")
+    System.out.println("Auth Info: " + authInfo)
+
+    //Getting the repositories
+    val repos = viewer.get("repositories").get.asInstanceOf[Map[String, Any]]
+    val numRepos = repos.get("totalCount")
+    System.out.println("# of repos: " + numRepos)
+
+    val nodes = repos.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
+
+    for(element <- nodes){
+      println(element)
+    }
+
+    //-------------------------Onto the optional fields-------------------------------------
+    var list1 = List[Map[String, Any]]()
+
+    for(element<-nodes)
+    {
+      //println(element)
+      list1 = element.get("languages").get.asInstanceOf[Map[String, Any]] :: list1
+    }
+
+    // print(list1)
+
+    var numLanguages = List[Any]()
+
+    for(element<-list1){
+      numLanguages = element.get("totalCount") :: numLanguages
+    }
+
+    print("Number of Languages used in each repository: " + numLanguages)
+
+    //val responseArray = respJson.split('{')
+    //responseArray.foreach(println)
+
   }
 
 
