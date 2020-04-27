@@ -29,7 +29,7 @@ object Test {
       .build
 
 
-
+    /*
     val BASE_GHQL_URL = "https://api.github.com/graphql"
     val temp: String = query.getQuery()
     implicit val formats = DefaultFormats
@@ -57,6 +57,6 @@ object Test {
         responseArray.foreach(println)
       }
     }
-
+  */
   }
 }
