@@ -199,6 +199,7 @@ class QueryCommand(repo: String = "",
 
     //Getting Auth, which I suppose is the name of the owner? That's all I get in my JSON response
     val data = view.get("data").get.asInstanceOf[Map[String, Any]]
+
     val viewer = data.get("viewer").get.asInstanceOf[Map[String, Any]]
 
     val authInfo = viewer.get("name").get
@@ -248,6 +249,13 @@ class QueryCommand(repo: String = "",
       val i = a + 1
       println("Repo #" + i + " -> " + "Number of languages: " + numLanguages.lift(a).get + ", Number of issues: " + numIssues.lift(a).get)
     }
+
+    //Getting endCursor and hasNextPage
+    val pageInfo = repos.get("pageInfo").get.asInstanceOf[Map[String, Any]]
+    val endCursor = pageInfo.get("endCursor").get.toString
+    val hasNextPage = pageInfo.get("hasNextPage").get.toString
+
+    println(endCursor + " " + hasNextPage)
 
     //-------------------------Onto the optional fields-------------------------------------
 
