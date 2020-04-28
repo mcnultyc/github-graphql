@@ -7,7 +7,7 @@ import org.json4s.jackson.JsonMethods.{parse, _}
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.HttpClientBuilder
-
+import scala.util.control._
 import scala.io.Source.fromInputStream
 
 
@@ -55,7 +55,6 @@ object IssueInfo extends Enumeration{
   val CLOSED_AT       = Value("closedAt")
   val LAST_EDITED_AT  = Value("lastEditedAt")
 }
-
 
 import CommitInfo.CommitInfo
 import LanguageInfo.LanguageInfo
@@ -146,25 +145,15 @@ class QueryCommand(repo: String = "",
                    issuesInfo: List[IssueInfo] = null,
                    authorizer: GitHub = null){
 
-  val query = createQuery()
-  println(query)
-
-  // TODO - unfinished query method
-  val response = execute(query)
-
-  // TODO - unfinished parse method
-  parseResponse(response)
 
 
-  private def execute(query: String): String ={
-
-    // TODO - handle pagination for queries
+  private def execute(): Unit ={
 
     val BASE_GHQL_URL = "https://api.github.com/graphql"
 
     val client = HttpClientBuilder.create().build()
     // Create http entity with graph-ql query
-    val entity = new StringEntity(s"""{"query":"$query"}""" )
+    val entity = new StringEntity(s"""{"query":"${createQuery()}"}""" )
     val request = new HttpPost(BASE_GHQL_URL)
 
     var headers = authorizer.getHeaders()
@@ -175,17 +164,30 @@ class QueryCommand(repo: String = "",
 
     // Set http headers for request
     headers.foreach(x => request.addHeader(x._1, x._2))
-    // Set http entity for request
-    request.setEntity(entity)
 
-    val response = client.execute(request)
+    val loop = new Breaks
+    loop.breakable{
+      while(true){
 
-    response.getEntity match{
-      case null => null
-      case x => {
+        // Set http entity for request
+        request.setEntity(entity)
+        // Execute request
+        val response = client.execute(request)
+
         // Get json from response content
-        val json = fromInputStream(x.getContent).getLines.mkString
-        json
+        val json =
+          response.getEntity match{
+            case null => ""
+            case x => {
+              fromInputStream(x.getContent).getLines.mkString
+            }
+          }
+        // Parse the graph-ql json
+        parseResponse(json)
+        val cursors: Map[String, String] = Map()
+        if(cursors.size == 0){
+          loop.break
+        }
       }
     }
   }
@@ -258,51 +260,60 @@ class QueryCommand(repo: String = "",
     println(endCursor + " " + hasNextPage)
 
     //-------------------------Onto the optional fields-------------------------------------
-
   }//End of parseResponse()
 
-  private def createQuery(): String ={
+
+
+  private def createQuery(cursors: Map[String, String] = Map()): String ={
 
     def fields(info: List[Any]): String =
-      info.map(x => x.toString).mkString(" ")
+      s"{${info.map(x => x.toString).mkString(" ")}}"
 
-    def nodes(fields: String) =
-      if(fields.trim =="") "" else s"nodes{$fields}pageInfo{endCursor hasNextPage}"
+    def nodes(fields: String): String =
+      if(fields.trim =="") "" else s" nodes $fields pageInfo{endCursor hasNextPage}"
 
+    def args(after: String = ""): String =
+      if(after != "") s"(first:100)" else s"(first:100, after: $after)"
     var repoFields = ""
 
     // Add json for primary language
     if(languageInfo != null){
-      repoFields += s" primaryLanguage{${fields(languageInfo)}}"
+      repoFields += s" primaryLanguage ${fields(languageInfo)}"
     }
     // Add json for languages
     if(languagesInfo != null){
-      repoFields += s" languages(first:100){totalCount ${nodes(fields(languagesInfo))}}"
+      repoFields += s" languages ${args(cursors.getOrElse("languages",""))}" +
+        s"{totalCount ${nodes(fields(languagesInfo))}}"
     }
     // Add json for stargazers
     if(starGazersInfo != null){
-      repoFields += s" stargazers(first:100){totalCount ${nodes(fields(starGazersInfo))}}"
+      repoFields += s" stargazers ${args(cursors.getOrElse("languages",""))}" +
+        s"{totalCount ${nodes(fields(starGazersInfo))}}"
     }
     // Add json for collaborators
     if(collaboratorsInfo != null){
-      repoFields += s" collaborators(first:100){totalCount ${nodes(fields(collaboratorsInfo))}}"
+      repoFields += s" collaborators${args(cursors.getOrElse("collaborators",""))}}" +
+        s"{totalCount ${nodes(fields(collaboratorsInfo))}}"
     }
     // Add json for commits
     if(commitsInfo != null){
-      val history = s" history(first:100){totalCount ${nodes(fields(commitsInfo))}}"
-      repoFields += s" defaultBranchRef{target{... on Commit{$history}}}"
+      val history = s" history ${args(cursors.getOrElse("history",""))}" +
+        s"{totalCount ${nodes(fields(commitsInfo))}}"
+      repoFields += s" defaultBranchRef{target{... on Commit{ $history}}}"
     }
     // Add json for issues
     if(issuesInfo != null){
-      repoFields += s" issues(first:100){totalCount ${nodes(fields(issuesInfo))}}"
+      repoFields += s" issues ${args(cursors.getOrElse("issues",""))}" +
+        s"{totalCount ${nodes(fields(issuesInfo))}}"
     }
 
     // Add root repo
     if(repo == ""){ // Query all repositories
-      s"query{viewer {name repositories(first:100){totalCount ${nodes(repoFields)}}}}"
+      s"query{viewer {name repositories ${args(cursors.getOrElse("repositories",""))}" +
+        s"{totalCount ${nodes(repoFields)}}}}"
     }
     else{ // Query single repository
-      s"query{viewer {name repository(name: $repo){$repoFields}}}"
+      s"query{viewer {name repository(name: $repo) { $repoFields}}}"
     }
   }
 }
