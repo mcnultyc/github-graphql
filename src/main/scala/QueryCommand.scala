@@ -14,7 +14,7 @@ import scala.io.Source.fromInputStream
 // Optional fields for commits
 object CommitInfo extends Enumeration{
   type CommitInfo = Value
-  val AUTHOR        = Value("author")       // graph-ql field
+  val AUTHOR        = Value("author{name}")       // graph-ql field
   val AUTHORED_DATE = Value("authoredDate")
   val MESSAGE       = Value("message")
   val CHANGED_FILES = Value("changedFiles")
@@ -47,7 +47,7 @@ object UserInfo extends Enumeration{
 // Optional fields for issues
 object IssueInfo extends Enumeration{
   type IssueInfo = Value
-  val AUTHOR          = Value("author")
+  val AUTHOR          = Value("author{login}")
   val BODY            = Value("body")
   val CREATED_AT      = Value("createdAt")
   val NUMBER          = Value("number")
@@ -56,10 +56,25 @@ object IssueInfo extends Enumeration{
   val LAST_EDITED_AT  = Value("lastEditedAt")
 }
 
+
+// Optional fields for repositories
+object RepoInfo extends Enumeration{
+  type RepoInfo = Value
+  val CREATED_AT  = Value("createdAt")
+  val DESCRIPTION = Value("description")
+  val FORK_COUNT  = Value("forkCount")
+  val IS_PRIVATE  = Value("isPrivate")
+  val IS_FORK     = Value("isFork")
+  val IS_ARCHIVED = Value("isArchived")
+  val NAME        = Value("name")
+}
+
+
 import CommitInfo.CommitInfo
 import LanguageInfo.LanguageInfo
 import UserInfo.UserInfo
 import IssueInfo.IssueInfo
+import RepoInfo.RepoInfo
 
 sealed trait QueryInfo
 object QueryInfo{
@@ -73,6 +88,8 @@ object QueryInfo{
 }
 
 case class QueryBuilder[I <: QueryInfo](repo: String = "",
+                                        owner: String = "",
+                                        repoInfo: List[RepoInfo] = null,
                                         commitsInfo: List[CommitInfo] = null,
                                         languageInfo: List[LanguageInfo] = null,
                                         languagesInfo: List[LanguageInfo] = null,
@@ -89,13 +106,13 @@ case class QueryBuilder[I <: QueryInfo](repo: String = "",
     this.copy(authorizer = auth)
   }
 
-  def withRepo(name: String): QueryBuilder[I with Repo] ={
-    this.copy(repo = name)
+  def withRepo(name: String, info: List[RepoInfo]): QueryBuilder[I with Repo] ={
+    this.copy(repo = name, repoInfo = info)
   }
 
-  def withRepo(name: String, owner: String): QueryBuilder[I with Repo] = {
+  def withRepo(name: String, owner: String, info: List[RepoInfo]): QueryBuilder[I with Repo] = {
     // TODO - allow to look up repo from another owner
-    this.copy(repo = name)
+    this.copy(repo = name, owner = owner, repoInfo = info)
   }
 
   def withRepos(): QueryBuilder[I with Repo] ={
@@ -130,13 +147,15 @@ case class QueryBuilder[I <: QueryInfo](repo: String = "",
 
   // Builder method
   def build(implicit ev: I =:= MandatoryInfo): QueryCommand = {
-    new QueryCommand(repo, commitsInfo, languageInfo, languagesInfo,
-      starGazersInfo, collaboratorsInfo, issuesInfo, authorizer)
+    new QueryCommand(repo, owner, repoInfo, commitsInfo, languageInfo,
+      languagesInfo, starGazersInfo, collaboratorsInfo, issuesInfo, authorizer)
   }
 }
 
 
 class QueryCommand(repo: String = "",
+                   owner: String = "",
+                   repoInfo: List[RepoInfo] = null,
                    commitsInfo: List[CommitInfo] = null,
                    languageInfo: List[LanguageInfo] = null,
                    languagesInfo: List[LanguageInfo] = null,
@@ -145,6 +164,9 @@ class QueryCommand(repo: String = "",
                    issuesInfo: List[IssueInfo] = null,
                    authorizer: GitHub = null){
 
+
+  // Execute the graph-ql query
+  execute()
 
 
   private def execute(): Unit ={
@@ -155,6 +177,8 @@ class QueryCommand(repo: String = "",
     // Create http entity with graph-ql query
     val entity = new StringEntity(s"""{"query":"${createQuery()}"}""" )
     val request = new HttpPost(BASE_GHQL_URL)
+
+    println(createQuery())
 
     var headers = authorizer.getHeaders()
     // Add authorization header if not already there
@@ -182,12 +206,18 @@ class QueryCommand(repo: String = "",
               fromInputStream(x.getContent).getLines.mkString
             }
           }
+
+        println(json)
+        loop.break()
+
+        /*
         // Parse the graph-ql json
         parseResponse(json)
         val cursors: Map[String, String] = Map()
         if(cursors.size == 0){
           loop.break
         }
+         */
       }
     }
   }
@@ -264,56 +294,88 @@ class QueryCommand(repo: String = "",
 
 
 
-  private def createQuery(cursors: Map[String, String] = Map()): String ={
+  private def createQuery(cursors: Map[String, String] = Map(), paginate: Boolean = false): String ={
 
     def fields(info: List[Any]): String =
-      s"{${info.map(x => x.toString).mkString(" ")}}"
+      s"{${info.map(x => x.toString).mkString(" ").trim}}"
 
     def nodes(fields: String): String =
-      if(fields.trim =="") "" else s" nodes $fields pageInfo{endCursor hasNextPage}"
+      if(fields.trim == "{}") "" else s" nodes $fields pageInfo{endCursor hasNextPage}"
 
     def args(after: String = ""): String =
-      if(after != "") s"(first:100)" else s"(first:100, after: $after)"
-    var repoFields = ""
+      if(after.trim == "") s"(first:100)" else s"(first:100, after: $after)"
 
-    // Add json for primary language
-    if(languageInfo != null){
-      repoFields += s" primaryLanguage ${fields(languageInfo)}"
+    // Default simple fields for repositories
+    val defaultFields = "{createdAt name description}"
+
+    // Complex fields used for a repository query
+    var complexFields = ""
+
+    // Check if user requested primary language info
+    if(languageInfo != null && languagesInfo.length != 0){
+      // Add json for primary language
+      complexFields += s" primaryLanguage ${fields(languageInfo)}"
     }
-    // Add json for languages
     if(languagesInfo != null){
-      repoFields += s" languages ${args(cursors.getOrElse("languages",""))}" +
-        s"{totalCount ${nodes(fields(languagesInfo))}}"
+      // Check if query is for pagination
+      if(!paginate || (paginate && cursors.get("languages") != None)){
+        // Add json for languages
+        complexFields += s" languages ${args(cursors.getOrElse("languages",""))}" +
+          s"{totalCount ${nodes(fields(languagesInfo))}}"
+      }
     }
-    // Add json for stargazers
     if(starGazersInfo != null){
-      repoFields += s" stargazers ${args(cursors.getOrElse("languages",""))}" +
-        s"{totalCount ${nodes(fields(starGazersInfo))}}"
+      if(!paginate || (paginate && cursors.get("stargazers") != None)){
+        // Add json for stargazers
+        complexFields += s" stargazers ${args(cursors.getOrElse("stargazers",""))}" +
+          s"{totalCount ${nodes(fields(starGazersInfo))}}"
+      }
     }
-    // Add json for collaborators
     if(collaboratorsInfo != null){
-      repoFields += s" collaborators${args(cursors.getOrElse("collaborators",""))}}" +
-        s"{totalCount ${nodes(fields(collaboratorsInfo))}}"
+      if(!paginate || (paginate && cursors.get("collaborators") != None)){
+        // Add json for collaborators
+        complexFields += s" collaborators${args(cursors.getOrElse("collaborators",""))}" +
+          s"{totalCount ${nodes(fields(collaboratorsInfo))}}"
+      }
     }
-    // Add json for commits
     if(commitsInfo != null){
-      val history = s" history ${args(cursors.getOrElse("history",""))}" +
-        s"{totalCount ${nodes(fields(commitsInfo))}}"
-      repoFields += s" defaultBranchRef{target{... on Commit{ $history}}}"
+      if(!paginate || (paginate && cursors.get("commits") != None)){
+        // Add json for commits
+        val history = s" history ${args(cursors.getOrElse("history",""))}" +
+          s"{totalCount ${nodes(fields(commitsInfo))}}"
+        complexFields += s" commits: defaultBranchRef{target{... on Commit{ $history}}}"
+      }
     }
-    // Add json for issues
     if(issuesInfo != null){
-      repoFields += s" issues ${args(cursors.getOrElse("issues",""))}" +
-        s"{totalCount ${nodes(fields(issuesInfo))}}"
+      if(!paginate || (paginate && cursors.get("issues") != None)){
+        // Add json for issues
+        complexFields += s" issues ${args(cursors.getOrElse("issues",""))}" +
+          s"{totalCount ${nodes(fields(issuesInfo))}}"
+      }
     }
 
-    // Add root repo
-    if(repo == ""){ // Query all repositories
-      s"query{viewer {name repositories ${args(cursors.getOrElse("repositories",""))}" +
-        s"{totalCount ${nodes(repoFields)}}}}"
+    // Set default simple fields
+    var simpleFields = defaultFields
+    // Check if user set simple fields for repository
+    if(repoInfo != null && repoInfo.length != 0){
+      simpleFields = fields(repoInfo)
     }
-    else{ // Query single repository
-      s"query{viewer {name repository(name: $repo) { $repoFields}}}"
+
+    // Combine simple and complex fields for repositories
+    val allFields = s"${simpleFields.trim.dropRight(1)} $complexFields}"
+
+    // Query repository for another user
+    if(repo != "" && owner != ""){
+      s"query{repository(name: $repo, owner: $owner) $allFields}"
+    }
+    // Query repository for user
+    else if(repo != ""){
+      s"query{viewer {name repository(name: $repo) $allFields}}"
+    }
+    // Query all repositories for user
+    else{
+      s"query{viewer {name repositories ${args(cursors.getOrElse("repositories",""))}" +
+        s"{totalCount ${nodes(allFields)}}}}"
     }
   }
 }
