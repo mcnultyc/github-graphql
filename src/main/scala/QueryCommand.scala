@@ -258,7 +258,7 @@ class QueryCommand(repo: String = "",
 
     var pageInfo_map = Map[String, String]()
 
-    if(hasNextPage == true){
+    if(hasNextPage == "true"){
       pageInfo_map += ("repositories" -> endCursor)
     }
 
