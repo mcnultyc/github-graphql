@@ -199,6 +199,8 @@ class QueryCommand(repo: String = "",
 
     val view = parse(response).extract[Map[String, Any]]
 
+    println(view)
+
     //Getting Auth, which I suppose is the name of the owner? That's all I get in my JSON response
     val data = view.get("data").get.asInstanceOf[Map[String, Any]]
 
@@ -213,9 +215,6 @@ class QueryCommand(repo: String = "",
     System.out.println("# of repos: " + numRepos)
 
     val nodes = repos.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
-    var repoNums = List[Int]()
-
-    repoNums = repoNums.reverse
 
     var list1 = List[Map[String, Any]]()
 
@@ -257,7 +256,11 @@ class QueryCommand(repo: String = "",
     val endCursor = pageInfo.get("endCursor").get.toString
     val hasNextPage = pageInfo.get("hasNextPage").get.toString
 
-    println(endCursor + " " + hasNextPage)
+    var pageInfo_map = Map[String, String]()
+
+    if(hasNextPage == true){
+      pageInfo_map += ("repositories" -> endCursor)
+    }
 
     //-------------------------Onto the optional fields-------------------------------------
 
