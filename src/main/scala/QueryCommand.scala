@@ -209,7 +209,7 @@ class QueryCommand(repo: String = "",
 
         println(json)
         loop.break()
-
+        // TODO - finish pagination
         /*
         // Parse the graph-ql json
         parseResponse(json)
