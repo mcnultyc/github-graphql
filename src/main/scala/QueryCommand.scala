@@ -208,6 +208,7 @@ class QueryCommand(repo: String = "",
           }
 
         println(json)
+        parseResponse(json)
         loop.break()
         // TODO - finish pagination
         /*
@@ -229,7 +230,7 @@ class QueryCommand(repo: String = "",
 
     val view = parse(response).extract[Map[String, Any]]
 
-    println(view)
+    //println(view)
 
     //Getting Auth, which I suppose is the name of the owner? That's all I get in my JSON response
     val data = view.get("data").get.asInstanceOf[Map[String, Any]]
@@ -276,11 +277,6 @@ class QueryCommand(repo: String = "",
 
     println("Number of Issues in each repository: " + numIssues)
 
-    for( a <- 0 to numRepos-1){
-      val i = a + 1
-      println("Repo #" + i + " -> " + "Number of languages: " + numLanguages.lift(a).get + ", Number of issues: " + numIssues.lift(a).get)
-    }
-
     //Getting endCursor and hasNextPage
     val pageInfo = repos.get("pageInfo").get.asInstanceOf[Map[String, Any]]
     val endCursor = pageInfo.get("endCursor").get.toString
@@ -293,6 +289,51 @@ class QueryCommand(repo: String = "",
     }
 
     //-------------------------Onto the optional fields-------------------------------------
+
+    //if(repoInfo != null){
+
+      var createdList = List[Any]()
+
+      for(element<-nodes)
+      {
+        createdList = element.get("createdAt").get :: createdList
+
+      }
+
+      createdList = createdList.reverse
+
+      var descriptionList = List[Any]()
+
+      for(element<-nodes)
+      {
+        descriptionList = element.get("description").get :: descriptionList
+
+      }
+
+      descriptionList = descriptionList.reverse
+
+      var nameList = List[Any]()
+
+      for(element<-nodes)
+      {
+        nameList = element.get("name").get :: nameList
+
+      }
+
+      nameList = nameList.reverse
+
+
+    //list1 = list1.reverse
+
+    for( a <- 0 to numRepos-1){
+      val i = a + 1
+      println("Repo #" + i + " -> "+ "Name: " + nameList.lift(a).get + ", Created: " + createdList.lift(a).get + ", Description: " + descriptionList.lift(a).get + ", Number of languages: " + numLanguages.lift(a).get + ", Number of issues: " + numIssues.lift(a).get)
+    }
+
+
+    //}//End of repoInfo if
+
+
   }//End of parseResponse()
 
 
