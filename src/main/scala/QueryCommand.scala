@@ -247,31 +247,31 @@ class QueryCommand(repo: String = "",
 
     val nodes = repos.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
 
-    var list1 = List[Map[String, Any]]()
+    var languagesList = List[Map[String, Any]]()
 
     for(element<-nodes)
     {
-      list1 = element.get("languages").get.asInstanceOf[Map[String, Any]] :: list1
+      languagesList = element.get("languages").get.asInstanceOf[Map[String, Any]] :: languagesList
 
     }
 
     var numLanguages = List[Int]()
 
-    for(element<-list1){
+    for(element<-languagesList){
       numLanguages = element.get("totalCount").get.toString.toInt :: numLanguages
     }
 
     println("Number of Languages used in each repository: " + numLanguages)
 
-    var list2 = List[Map[String, Any]]()
+    var issuesList = List[Map[String, Any]]()
 
     for(element <- nodes){
-      list2 = element.get("issues").get.asInstanceOf[Map[String, Any]] :: list2
+      issuesList = element.get("issues").get.asInstanceOf[Map[String, Any]] :: issuesList
     }
 
     var numIssues = List[Int]()
 
-    for(element <- list2){
+    for(element <- issuesList){
       numIssues = element.get("totalCount").get.toString.toInt :: numIssues
     }
 
@@ -288,7 +288,7 @@ class QueryCommand(repo: String = "",
       pageInfo_map += ("repositories" -> endCursor)
     }
 
-    //-------------------------Onto the optional fields-------------------------------------
+    //-------------------------Onto the optional fields------------------------------------------------------------
 
     //if(repoInfo != null){
 
@@ -323,7 +323,7 @@ class QueryCommand(repo: String = "",
       nameList = nameList.reverse
 
 
-    //list1 = list1.reverse
+    //languagesList = languagesList.reverse
 
     for( a <- 0 to numRepos-1){
       val i = a + 1
@@ -332,7 +332,38 @@ class QueryCommand(repo: String = "",
 
 
     //}//End of repoInfo if
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //if(commitsInfo != null){
 
+      var commitsList = List[Map[String, Any]]()
+      for(element<-nodes){
+        commitsList = element.get("commits").get.asInstanceOf[Map[String, Any]] :: commitsList
+      }
+
+      println(commitsList)
+    //}
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //if(starGazersInfo != null) {
+
+      var stargazersList = List[Map[String, Any]]()
+
+      for (element <- nodes) {
+        stargazersList = element.get("stargazers").get.asInstanceOf[Map[String, Any]] :: stargazersList
+      }
+
+      println(stargazersList)
+    //}
+ //--------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //if(){
+      var collaboratorsList = List[Map[String, Any]]()
+
+      for(element<-nodes){
+        collaboratorsList = element.get("collaborators").get.asInstanceOf[Map[String, Any]] :: collaboratorsList
+      }
+
+      println(collaboratorsList)
+
+    //}
 
   }//End of parseResponse()
 
