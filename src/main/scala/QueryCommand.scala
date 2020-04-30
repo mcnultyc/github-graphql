@@ -106,12 +106,11 @@ case class QueryBuilder[I <: QueryInfo](repo: String = "",
     this.copy(authorizer = auth)
   }
 
-  def withRepo(name: String, info: List[RepoInfo]): QueryBuilder[I with Repo] ={
+  def withRepo(name: String, info: List[RepoInfo] = List()): QueryBuilder[I with Repo] ={
     this.copy(repo = name, repoInfo = info)
   }
 
-  def withRepo(name: String, owner: String, info: List[RepoInfo]): QueryBuilder[I with Repo] = {
-    // TODO - allow to look up repo from another owner
+  def withRepo(name: String, owner: String, info: List[RepoInfo] = List()): QueryBuilder[I with Repo] = {
     this.copy(repo = name, owner = owner, repoInfo = info)
   }
 
