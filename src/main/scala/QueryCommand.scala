@@ -1,12 +1,12 @@
 import org.apache.http.client.methods.HttpPost
-import org.apache.http.entity.StringEntity
-import org.apache.http.impl.client.HttpClientBuilder
+import org.apache.http.entity.{ContentType, StringEntity}
 import org.json4s.DefaultFormats
 import org.json4s._
 import org.json4s.jackson.JsonMethods.{parse, _}
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.HttpClientBuilder
+
 import scala.util.control._
 import scala.io.Source.fromInputStream
 
@@ -110,12 +110,12 @@ case class QueryBuilder[I <: QueryInfo](repo: String = "",
     this.copy(repo = name, repoInfo = info)
   }
 
-  def withRepo(name: String, owner: String, info: List[RepoInfo] = List()): QueryBuilder[I with Repo] = {
+  def withRepoOwner(name: String, owner: String, info: List[RepoInfo] = List()): QueryBuilder[I with Repo] = {
     this.copy(repo = name, owner = owner, repoInfo = info)
   }
 
-  def withRepos(): QueryBuilder[I with Repo] ={
-    this.copy(repo = "")
+  def withRepos(info: List[RepoInfo] = List()): QueryBuilder[I with Repo] ={
+    this.copy(repo = "", repoInfo=info)
   }
 
   // Optional methods for query
@@ -174,17 +174,15 @@ class QueryCommand(repo: String = "",
 
     val client = HttpClientBuilder.create().build()
     // Create http entity with graph-ql query
-    val entity = new StringEntity(s"""{"query":"${createQuery()}"}""" )
+    val entity = new StringEntity(s"""{"query":"${createQuery()}"}""" , ContentType.APPLICATION_JSON)
+    println(s"""{"query":"${createQuery()}"}""")
     val request = new HttpPost(BASE_GHQL_URL)
-
-    println(createQuery())
 
     var headers = authorizer.getHeaders()
     // Add authorization header if not already there
     if(!headers.toMap.contains("Authorization")){
       headers = ("Authorization", "bearer "+ authorizer.getToken()) :: headers
     }
-
     // Set http headers for request
     headers.foreach(x => request.addHeader(x._1, x._2))
 
@@ -207,7 +205,7 @@ class QueryCommand(repo: String = "",
           }
 
         println(json)
-        parseResponse(json)
+        //parseResponse(json) // TODO - getting exceptions here
         loop.break()
         // TODO - finish pagination
         /*
@@ -440,11 +438,11 @@ class QueryCommand(repo: String = "",
 
     // Query repository for another user
     if(repo != "" && owner != ""){
-      s"query{repository(name: $repo, owner: $owner) $allFields}"
+      s"""query{repository(name: \\"$repo\\", owner: \\"$owner\\") $allFields}"""
     }
     // Query repository for user
     else if(repo != ""){
-      s"query{viewer {name repository(name: $repo) $allFields}}"
+      s"""query{viewer {name repository(name: \\"$repo\\") $allFields}}"""
     }
     // Query all repositories for user
     else{
