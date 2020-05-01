@@ -267,6 +267,8 @@ class QueryCommand(repo: String = "",
         // endCursorMap.addOne("languages" -> languages_pageInfo.get("endCursor").get.toString)
       }
 
+      println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
+
       //print(endCursorMap)
 
       //Getting stargazers info
@@ -282,6 +284,9 @@ class QueryCommand(repo: String = "",
         if (stargazers_pageInfo.get("hasNextPage").get == true) {
           // endCursorMap.addOne("stargazers" -> stargazers_pageInfo.get("endCursor").get.toString)
         }
+
+        println("Stargazers Info -> " + "Count: " + stargazersCount + ", Nodes: " + stargazers)
+
       }
 
       //Getting collaborators info
@@ -312,6 +317,8 @@ class QueryCommand(repo: String = "",
           // endCursorMap.addOne("commits" -> commits_pageInfo.get("endCursor").get.toString)
         }
 
+        println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
+
       }
 
       //Getting issues info
@@ -327,6 +334,8 @@ class QueryCommand(repo: String = "",
         if (issues_pageInfo.get("hasNextPage").get == true) {
           // endCursorMap.addOne("issues" -> issues_pageInfo.get("endCursor").get.toString)
         }
+
+        println("Issues Info -> " + "Count: " + issuesCount + ", Nodes: " + issuesNodes)
 
       }
 
