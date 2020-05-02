@@ -20,7 +20,7 @@ object Test {
       .withAuth(TOKEN)
       .withHeaders(List((ACCEPT, APP_JSON)))
       .build
-
+/*
     val query: QueryCommand = QueryBuilder()
       .withRepoOwner("shell", "sarthak77")
       .withAuth(github)
@@ -30,5 +30,39 @@ object Test {
       .withIssues(List(IssueInfo.AUTHOR))
       .withLanguages(List(LanguageInfo.NAME))
       .build
+
+ */
+
+/*
+  val query: QueryCommand = QueryBuilder()
+    .withRepo("Phone-List-App")
+    .withAuth(github)
+    .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+    .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
+    .withCommits(List(CommitInfo.AUTHOR))
+    .withIssues(List(IssueInfo.AUTHOR))
+    .withLanguages(List(LanguageInfo.NAME))
+    .build
+ */
+
+
+    val allIssues = IssueInfo.values.toList
+    val allCommits = CommitInfo.values.toList
+    val allUsers = UserInfo.values.toList
+    val allLangs = LanguageInfo.values.toList
+    val allRepo = RepoInfo.values.toList
+
+
+    val query: QueryCommand = QueryBuilder()
+      .withRepos(allRepo)
+      .withAuth(github)
+      .withStarGazers(allUsers)
+      .withCollaborators(allUsers)
+      .withCommits(allCommits)
+      .withIssues(allIssues)
+      .withLanguages(allLangs)
+      .build
+
   }
+
 }

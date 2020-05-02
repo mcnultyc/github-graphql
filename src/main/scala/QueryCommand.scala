@@ -206,7 +206,7 @@ class QueryCommand(repo: String = "",
           }
 
         println(json)
-        parseResponse(json) // TODO - getting exceptions here
+        //parseResponse(json) // TODO - getting exceptions here
         loop.break()
         // TODO - finish pagination
         /*
@@ -344,199 +344,139 @@ class QueryCommand(repo: String = "",
 
       //}
 
-
-
     }//End of repository for another user
     // Query repository for user
     else if(repo != ""){
       val viewer = data.get("viewer").get.asInstanceOf[Map[String, Any]]
 
-      //val authInfo = viewer.get("name").get
-      //System.out.println("Auth Info: " + authInfo)
+      val viewerName = viewer.get("name").get
 
-      //Getting the repositories
-      val repos = viewer.get("repository").get.asInstanceOf[Map[String, Any]]
-      val numRepos = repos.get("totalCount").get.toString.toInt
-      System.out.println("# of repos: " + numRepos)
+      println("Viewer Name: " + viewerName)
 
-      val nodes = repos.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
+      //Getting the repository info
+      val repo = viewer.get("repository").get.asInstanceOf[Map[String, Any]]
 
-      var languagesList = List[Map[String, Any]]()
+      val createdInfo = repo.get("createdAt").get
 
-      for(element<-nodes)
-      {
-        languagesList = element.get("languages").get.asInstanceOf[Map[String, Any]] :: languagesList
+      val repoName = repo.get("name").get
+
+      val repoDesc = repo.get("description").get
+
+      println("Repo Info -> " + "Name: " + repoName + ", Created: " + createdInfo + ", Desc: " + repoDesc)
+
+      val endCursorMap = Map[String, String]()
+
+      //Getting language info
+      val languageInfo = repo.get("languages").get.asInstanceOf[Map[String, Any]]
+
+      val numLanguages = languageInfo.get("totalCount").get.toString.toInt
+
+      val languages = languageInfo.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
+
+      var languageTypes = List[Any]()
+
+      for(element<-languages){
+        languageTypes = element.get("name").get :: languageTypes
+      }
+
+      val languages_pageInfo = languageInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
+
+      if(languages_pageInfo.get("hasNextPage").get == true){
+        // endCursorMap.addOne("languages" -> languages_pageInfo.get("endCursor").get.toString)
+      }
+
+      println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
+
+      //print(endCursorMap)
+
+      //Getting stargazers info
+      if(repo.get("stargazers").get != null) {
+        val stargazersInfo = repo.get("stargazers").get.asInstanceOf[Map[String, Any]]
+
+        val stargazersCount = stargazersInfo.get("totalCount").get
+
+        val stargazers = stargazersInfo.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
+
+        val stargazers_pageInfo = stargazersInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
+
+        if (stargazers_pageInfo.get("hasNextPage").get == true) {
+          // endCursorMap.addOne("stargazers" -> stargazers_pageInfo.get("endCursor").get.toString)
+        }
+
+        println("Stargazers Info -> " + "Count: " + stargazersCount + ", Nodes: " + stargazers)
 
       }
 
-      var numLanguages = List[Int]()
-
-      for(element<-languagesList){
-        numLanguages = element.get("totalCount").get.toString.toInt :: numLanguages
+      //Getting collaborators info
+      if(repo.get("collaborators").get != null) {
+        val collaboratorsInfo = repo.get("collaborators").get.asInstanceOf[Map[String, Any]]
       }
 
-      println("Number of Languages used in each repository: " + numLanguages)
+      //Getting commits info
+      if(repo.get("commits").get != null) {
+        val commitsInfo = repo.get("commits").get.asInstanceOf[Map[String, Any]]
+        val target = commitsInfo.get("target").get.asInstanceOf[Map[String, Any]]
+        val history = target.get("history").get.asInstanceOf[Map[String, Any]]
 
-      var issuesList = List[Map[String, Any]]()
+        val commitsCount = history.get("totalCount").get
 
-      for(element <- nodes){
-        issuesList = element.get("issues").get.asInstanceOf[Map[String, Any]] :: issuesList
-      }
+        val commitNodes = history.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
 
-      var numIssues = List[Int]()
+        var authorList = List[Map[String, Any]]()
 
-      for(element <- issuesList){
-        numIssues = element.get("totalCount").get.toString.toInt :: numIssues
-      }
+        for (element <- commitNodes) {
+          val author = element.get("author")
+          authorList = author.get.asInstanceOf[Map[String, Any]] :: authorList
+        }
 
-      println("Number of Issues in each repository: " + numIssues)
+        val commits_pageInfo = history.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
-      //Getting endCursor and hasNextPage
-      val pageInfo = repos.get("pageInfo").get.asInstanceOf[Map[String, Any]]
-      val endCursor = pageInfo.get("endCursor").get.toString
-      val hasNextPage = pageInfo.get("hasNextPage").get.toString
+        if (commits_pageInfo.get("hasNextPage").get == true) {
+          // endCursorMap.addOne("commits" -> commits_pageInfo.get("endCursor").get.toString)
+        }
 
-      var pageInfo_map = Map[String, String]()
-
-      if(hasNextPage == "true"){
-        pageInfo_map += ("repositories" -> endCursor)
-      }
-
-      //-------------------------Onto the optional fields------------------------------------------------------------
-
-      //if(repoInfo != null){
-
-      var createdList = List[Any]()
-
-      for(element<-nodes)
-      {
-        createdList = element.get("createdAt").get :: createdList
+        println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
 
       }
 
-      createdList = createdList.reverse
+      //Getting issues info
+      if(repo.get("issues").get != null){
+        val issuesInfo = repo.get("issues").get.asInstanceOf[Map[String, Any]]
 
-      var descriptionList = List[Any]()
+        val issuesCount = issuesInfo.get("totalCount").get
 
-      for(element<-nodes)
-      {
-        descriptionList = element.get("description").get :: descriptionList
+        val issuesNodes = issuesInfo.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
 
-      }
+        val issues_pageInfo = issuesInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
-      descriptionList = descriptionList.reverse
+        if (issues_pageInfo.get("hasNextPage").get == true) {
+          // endCursorMap.addOne("issues" -> issues_pageInfo.get("endCursor").get.toString)
+        }
 
-      var nameList = List[Any]()
-
-      for(element<-nodes)
-      {
-        nameList = element.get("name").get :: nameList
+        println("Issues Info -> " + "Count: " + issuesCount + ", Nodes: " + issuesNodes)
 
       }
 
-      nameList = nameList.reverse
-
-
-      //languagesList = languagesList.reverse
-
-      for( a <- 0 to numRepos-1){
-        val i = a + 1
-        println("Repo #" + i + " -> "+ "Name: " + nameList.lift(a).get + ", Created: " + createdList.lift(a).get + ", Description: " + descriptionList.lift(a).get + ", Number of languages: " + numLanguages.lift(a).get + ", Number of issues: " + numIssues.lift(a).get)
-      }
-
-
-      //}//End of repoInfo if
-      //---------------------------------------------------------------------------------------------------------------------------------------------------------------
-      //if(commitsInfo != null){
-
-      var commitsList = List[Map[String, Any]]()
-      for(element<-nodes){
-        commitsList = element.get("commits").get.asInstanceOf[Map[String, Any]] :: commitsList
-      }
-
-      println(commitsList)
-      //}
-      //---------------------------------------------------------------------------------------------------------------------------------------------------------------
-      //if(starGazersInfo != null) {
-
-      var stargazersList = List[Map[String, Any]]()
-
-      for (element <- nodes) {
-        stargazersList = element.get("stargazers").get.asInstanceOf[Map[String, Any]] :: stargazersList
-      }
-
-      println(stargazersList)
-      //}
-      //--------------------------------------------------------------------------------------------------------------------------------------------------------------
-      //if(){
-      var collaboratorsList = List[Map[String, Any]]()
-
-      for(element<-nodes){
-        collaboratorsList = element.get("collaborators").get.asInstanceOf[Map[String, Any]] :: collaboratorsList
-      }
-
-      println(collaboratorsList)
+      //Getting errors info
+      // if(repo.get("errors").get != null){
 
       //}
+
     }//End of single user repository
     // Query all repositories for user
     else{
       val viewer = data.get("viewer").get.asInstanceOf[Map[String, Any]]
 
-      //val authInfo = viewer.get("name").get
-      //System.out.println("Auth Info: " + authInfo)
+      val viewerName = viewer.get("name").get
 
-      //Getting the repositories
+      println("Viewer Name: " + viewerName)
+
+      //Getting the repositories information
       val repos = viewer.get("repositories").get.asInstanceOf[Map[String, Any]]
       val numRepos = repos.get("totalCount").get.toString.toInt
-      System.out.println("# of repos: " + numRepos)
+      println("# of repos: " + numRepos)
 
       val nodes = repos.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
-
-      var languagesList = List[Map[String, Any]]()
-
-      for(element<-nodes)
-      {
-        languagesList = element.get("languages").get.asInstanceOf[Map[String, Any]] :: languagesList
-
-      }
-
-      var numLanguages = List[Int]()
-
-      for(element<-languagesList){
-        numLanguages = element.get("totalCount").get.toString.toInt :: numLanguages
-      }
-
-      println("Number of Languages used in each repository: " + numLanguages)
-
-      var issuesList = List[Map[String, Any]]()
-
-      for(element <- nodes){
-        issuesList = element.get("issues").get.asInstanceOf[Map[String, Any]] :: issuesList
-      }
-
-      var numIssues = List[Int]()
-
-      for(element <- issuesList){
-        numIssues = element.get("totalCount").get.toString.toInt :: numIssues
-      }
-
-      println("Number of Issues in each repository: " + numIssues)
-
-      //Getting endCursor and hasNextPage
-      val pageInfo = repos.get("pageInfo").get.asInstanceOf[Map[String, Any]]
-      val endCursor = pageInfo.get("endCursor").get.toString
-      val hasNextPage = pageInfo.get("hasNextPage").get.toString
-
-      var pageInfo_map = Map[String, String]()
-
-      if(hasNextPage == "true"){
-        pageInfo_map += ("repositories" -> endCursor)
-      }
-
-      //-------------------------Onto the optional fields------------------------------------------------------------
-
-      //if(repoInfo != null){
 
       var createdList = List[Any]()
 
@@ -568,16 +508,44 @@ class QueryCommand(repo: String = "",
 
       nameList = nameList.reverse
 
+      //Getting the languages info
+      var languagesList = List[Map[String, Any]]()
 
-      //languagesList = languagesList.reverse
+      for(element<-nodes)
+      {
+        languagesList = element.get("languages").get.asInstanceOf[Map[String, Any]] :: languagesList
 
-      for( a <- 0 to numRepos-1){
-        val i = a + 1
-        println("Repo #" + i + " -> "+ "Name: " + nameList.lift(a).get + ", Created: " + createdList.lift(a).get + ", Description: " + descriptionList.lift(a).get + ", Number of languages: " + numLanguages.lift(a).get + ", Number of issues: " + numIssues.lift(a).get)
       }
 
+      var numLanguages = List[Int]()
 
-      //}//End of repoInfo if
+      for(element<-languagesList){
+        numLanguages = element.get("totalCount").get.toString.toInt :: numLanguages
+      }
+
+      var issuesList = List[Map[String, Any]]()
+
+      for(element <- nodes){
+        issuesList = element.get("issues").get.asInstanceOf[Map[String, Any]] :: issuesList
+      }
+
+      var numIssues = List[Int]()
+
+      for(element <- issuesList){
+        numIssues = element.get("totalCount").get.toString.toInt :: numIssues
+      }
+
+      //Getting endCursor and hasNextPage
+      val pageInfo = repos.get("pageInfo").get.asInstanceOf[Map[String, Any]]
+      val endCursor = pageInfo.get("endCursor").get.toString
+      val hasNextPage = pageInfo.get("hasNextPage").get.toString
+
+      var pageInfo_map = Map[String, String]()
+
+      if(hasNextPage == "true"){
+        pageInfo_map += ("repositories" -> endCursor)
+      }
+
       //---------------------------------------------------------------------------------------------------------------------------------------------------------------
       //if(commitsInfo != null){
 
@@ -608,6 +576,12 @@ class QueryCommand(repo: String = "",
       }
 
       println(collaboratorsList)
+
+      //Printing all the information
+      for( a <- 0 to numRepos-1){
+        val i = a + 1
+        println("Repo #" + i + " -> "+ "Name: " + nameList.lift(a).get + ", Created: " + createdList.lift(a).get + ", Description: " + descriptionList.lift(a).get + ", Number of languages: " + numLanguages.lift(a).get + ", Number of issues: " + numIssues.lift(a).get)
+      }
 
       //}
     }//End of all repositories
