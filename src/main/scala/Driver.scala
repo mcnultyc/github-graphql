@@ -1,14 +1,11 @@
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
-import QueryInfo.Empty
-import org.apache.http.client.methods.HttpPost
-import org.apache.http.entity.StringEntity
-import org.apache.http.impl.client.HttpClientBuilder
-import org.json4s.native.JsonMethods
 
-import scala.io.Source.fromInputStream
+import com.typesafe.config.ConfigFactory
 
-object Test {
+import org.slf4j.{Logger, LoggerFactory}
+
+object Driver {
+
+  val logger = LoggerFactory.getLogger(Driver.getClass)
 
   def main(args: Array[String]): Unit = {
 

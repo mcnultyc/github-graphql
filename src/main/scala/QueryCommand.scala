@@ -1,14 +1,19 @@
-import org.apache.http.client.methods.HttpPost
-import org.apache.http.entity.{ContentType, StringEntity}
+
 import org.json4s.DefaultFormats
 import org.json4s._
 import org.json4s.jackson.JsonMethods.{parse, _}
+
 import org.apache.http.client.methods.HttpPost
-import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.HttpClientBuilder
+import org.apache.http.entity.{ContentType, StringEntity}
 
 import scala.util.control._
 import scala.io.Source.fromInputStream
+
+import com.typesafe.config.ConfigFactory
+
+import org.slf4j.{Logger, LoggerFactory}
+
 //import scala.collection.mutable.Map
 
 
@@ -164,6 +169,7 @@ class QueryCommand(repo: String = "",
                    issuesInfo: List[IssueInfo] = null,
                    authorizer: GitHub = null){
 
+  val logger = LoggerFactory.getLogger(this.getClass)
 
   // Execute the graph-ql query
   execute()
@@ -171,12 +177,15 @@ class QueryCommand(repo: String = "",
 
   private def execute(): Unit ={
 
+
     val BASE_GHQL_URL = "https://api.github.com/graphql"
 
     val client = HttpClientBuilder.create().build()
+    // Create graph-ql query
+    val query = createQuery()
     // Create http entity with graph-ql query
-    val entity = new StringEntity(s"""{"query":"${createQuery()}"}""" , ContentType.APPLICATION_JSON)
-    println(s"""{"query":"${createQuery()}"}""")
+    val entity = new StringEntity(s"""{"query":"$query"}""" , ContentType.APPLICATION_JSON)
+
     val request = new HttpPost(BASE_GHQL_URL)
 
     var headers = authorizer.getHeaders()
@@ -190,9 +199,11 @@ class QueryCommand(repo: String = "",
     val loop = new Breaks
     loop.breakable{
       while(true){
-
+        logger.info(s"""creating http post with entity: {"query":"$query"}""")
         // Set http entity for request
         request.setEntity(entity)
+
+        logger.info("executing http post request")
         // Execute request
         val response = client.execute(request)
 
@@ -626,6 +637,8 @@ class QueryCommand(repo: String = "",
 
     def args(after: String = ""): String =
       if(after.trim == "") s"(first:100)" else s"(first:100, after: $after)"
+
+    logger.info(s"creating graph-ql query: # cursors: ${cursors.size}, pagination = $paginate")
 
     // Default simple fields for repositories
     val defaultFields = "{createdAt name description}"
