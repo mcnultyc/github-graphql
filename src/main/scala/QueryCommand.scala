@@ -2,16 +2,13 @@
 import org.json4s.DefaultFormats
 import org.json4s._
 import org.json4s.jackson.JsonMethods.{parse, _}
-
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.entity.{ContentType, StringEntity}
 
 import scala.util.control._
 import scala.io.Source.fromInputStream
-
-import com.typesafe.config.ConfigFactory
-
+import com.typesafe.config.{Config, ConfigFactory}
 import org.slf4j.{Logger, LoggerFactory}
 
 //import scala.collection.mutable.Map
@@ -619,10 +616,15 @@ class QueryCommand(repo: String = "",
     def nodes(fields: String): String =
       if(fields.trim == "{}") "" else s" nodes $fields pageInfo{endCursor hasNextPage}"
 
-    def args(after: String = ""): String =
-      if(after.trim == "") s"(first:100)" else s"(first:100, after: $after)"
+    def args(after: String = "", first:Int = 100): String =
+      if(after.trim == "") s"(first:$first)" else s"(first:$first, after: $after)"
 
     logger.info(s"creating graph-ql query: # cursors: ${cursors.size}, pagination = $paginate")
+
+    val config: Config = ConfigFactory.load().getConfig("GQL")
+
+    // Get the limit of total nodes for fields
+    val first = config.getInt("LIMIT")
 
     // Default simple fields for repositories
     val defaultFields = "{createdAt name description}"
@@ -639,14 +641,14 @@ class QueryCommand(repo: String = "",
       // Check if query is for pagination
       if(!paginate || (paginate && cursors.get("languages") != None)){
         // Add json for languages
-        complexFields += s" languages ${args(cursors.getOrElse("languages",""))}" +
+        complexFields += s" languages ${args(cursors.getOrElse("languages",""), first)}" +
           s"{totalCount ${nodes(fields(languagesInfo))}}"
       }
     }
     if(starGazersInfo != null){
       if(!paginate || (paginate && cursors.get("stargazers") != None)){
         // Add json for stargazers
-        complexFields += s" stargazers ${args(cursors.getOrElse("stargazers",""))}" +
+        complexFields += s" stargazers ${args(cursors.getOrElse("stargazers",""), first)}" +
           s"{totalCount ${nodes(fields(starGazersInfo))}}"
       }
     }
@@ -654,14 +656,14 @@ class QueryCommand(repo: String = "",
     if(collaboratorsInfo != null && owner == ""){
       if(!paginate || (paginate && cursors.get("collaborators") != None)){
         // Add json for collaborators
-        complexFields += s" collaborators${args(cursors.getOrElse("collaborators",""))}" +
+        complexFields += s" collaborators${args(cursors.getOrElse("collaborators",""), first)}" +
           s"{totalCount ${nodes(fields(collaboratorsInfo))}}"
       }
     }
     if(commitsInfo != null){
       if(!paginate || (paginate && cursors.get("commits") != None)){
         // Add json for commits
-        val history = s" history ${args(cursors.getOrElse("history",""))}" +
+        val history = s" history ${args(cursors.getOrElse("history",""), first)}" +
           s"{totalCount ${nodes(fields(commitsInfo))}}"
         complexFields += s" commits: defaultBranchRef{target{... on Commit{ $history}}}"
       }
@@ -669,7 +671,7 @@ class QueryCommand(repo: String = "",
     if(issuesInfo != null){
       if(!paginate || (paginate && cursors.get("issues") != None)){
         // Add json for issues
-        complexFields += s" issues ${args(cursors.getOrElse("issues",""))}" +
+        complexFields += s" issues ${args(cursors.getOrElse("issues",""), first)}" +
           s"{totalCount ${nodes(fields(issuesInfo))}}"
       }
     }
@@ -694,7 +696,7 @@ class QueryCommand(repo: String = "",
     }
     // Query all repositories for user
     else{
-      s"query{viewer {name repositories ${args(cursors.getOrElse("repositories",""))}" +
+      s"query{viewer {name repositories ${args(cursors.getOrElse("repositories",""), first)}" +
         s"{totalCount ${nodes(allFields)}}}}"
     }
   }
