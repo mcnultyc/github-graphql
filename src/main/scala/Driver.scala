@@ -2,6 +2,8 @@
 import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
 
 import com.typesafe.config.ConfigFactory
+import org.slf4j.{Logger, LoggerFactory}
+
 
 object Driver {
 
@@ -45,7 +47,7 @@ object Driver {
 
    */
 
-       val allIssues = IssueInfo.values.toList
+    val allIssues = IssueInfo.values.toList
     val allCommits = CommitInfo.values.toList
     val allUsers = UserInfo.values.toList
     val allLangs = LanguageInfo.values.toList
