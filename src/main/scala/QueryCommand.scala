@@ -260,30 +260,32 @@ class QueryCommand(repo: String = "",
       val endCursorMap = Map[String, String]()
 
       //Getting language info
-      val languageInfo = repo.get("languages").get.asInstanceOf[Map[String, Any]]
+      if(languageInfo != null || languagesInfo != null) {
+        val languageInfo = repo.get("languages").get.asInstanceOf[Map[String, Any]]
 
-      val numLanguages = languageInfo.get("totalCount").get.toString.toInt
+        val numLanguages = languageInfo.get("totalCount").get.toString.toInt
 
-      val languages = languageInfo.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
+        val languages = languageInfo.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
 
-      var languageTypes = List[Any]()
+        var languageTypes = List[Any]()
 
-      for(element<-languages){
-        languageTypes = element.get("name").get :: languageTypes
+        for (element <- languages) {
+          languageTypes = element.get("name").get :: languageTypes
+        }
+
+        val languages_pageInfo = languageInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
+
+        if (languages_pageInfo.get("hasNextPage").get == true) {
+          // endCursorMap.addOne("languages" -> languages_pageInfo.get("endCursor").get.toString)
+        }
+
+        println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
+
+        //print(endCursorMap)
       }
-
-      val languages_pageInfo = languageInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
-
-      if(languages_pageInfo.get("hasNextPage").get == true){
-        // endCursorMap.addOne("languages" -> languages_pageInfo.get("endCursor").get.toString)
-      }
-
-      println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
-
-      //print(endCursorMap)
 
       //Getting stargazers info
-      if(repo.get("stargazers").get != null) {
+      if(starGazersInfo != null) {
         val stargazersInfo = repo.get("stargazers").get.asInstanceOf[Map[String, Any]]
 
         val stargazersCount = stargazersInfo.get("totalCount").get
@@ -301,12 +303,12 @@ class QueryCommand(repo: String = "",
       }
 
       //Getting collaborators info
-      if(repo.get("collaborators").get != null) {
-        val collaboratorsInfo = repo.get("collaborators").get.asInstanceOf[Map[String, Any]]
-      }
+     // if(collaboratorsInfo != null) {
+       // val collaboratorsInfo = repo.get("collaborators").get.asInstanceOf[Map[String, Any]]
+      //}
 
       //Getting commits info
-      if(repo.get("commits").get != null) {
+      if(commitsInfo != null) {
         val commitsInfo = repo.get("commits").get.asInstanceOf[Map[String, Any]]
         val target = commitsInfo.get("target").get.asInstanceOf[Map[String, Any]]
         val history = target.get("history").get.asInstanceOf[Map[String, Any]]
@@ -333,7 +335,7 @@ class QueryCommand(repo: String = "",
       }
 
       //Getting issues info
-      if(repo.get("issues").get != null){
+      if(issuesInfo != null){
         val issuesInfo = repo.get("issues").get.asInstanceOf[Map[String, Any]]
 
         val issuesCount = issuesInfo.get("totalCount").get
@@ -378,30 +380,32 @@ class QueryCommand(repo: String = "",
       val endCursorMap = Map[String, String]()
 
       //Getting language info
-      val languageInfo = repo.get("languages").get.asInstanceOf[Map[String, Any]]
+      if(languagesInfo != null || languageInfo != null) {
+        val languageInfo = repo.get("languages").get.asInstanceOf[Map[String, Any]]
 
-      val numLanguages = languageInfo.get("totalCount").get.toString.toInt
+        val numLanguages = languageInfo.get("totalCount").get.toString.toInt
 
-      val languages = languageInfo.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
+        val languages = languageInfo.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
 
-      var languageTypes = List[Any]()
+        var languageTypes = List[Any]()
 
-      for(element<-languages){
-        languageTypes = element.get("name").get :: languageTypes
+        for (element <- languages) {
+          languageTypes = element.get("name").get :: languageTypes
+        }
+
+        val languages_pageInfo = languageInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
+
+        if (languages_pageInfo.get("hasNextPage").get == true) {
+          // endCursorMap.addOne("languages" -> languages_pageInfo.get("endCursor").get.toString)
+        }
+
+        println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
+
+        //print(endCursorMap)
       }
-
-      val languages_pageInfo = languageInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
-
-      if(languages_pageInfo.get("hasNextPage").get == true){
-        // endCursorMap.addOne("languages" -> languages_pageInfo.get("endCursor").get.toString)
-      }
-
-      println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
-
-      //print(endCursorMap)
 
       //Getting stargazers info
-      if(repo.get("stargazers").get != null) {
+      if(starGazersInfo != null) {
         val stargazersInfo = repo.get("stargazers").get.asInstanceOf[Map[String, Any]]
 
         val stargazersCount = stargazersInfo.get("totalCount").get
@@ -419,12 +423,12 @@ class QueryCommand(repo: String = "",
       }
 
       //Getting collaborators info
-      if(repo.get("collaborators").get != null) {
-        val collaboratorsInfo = repo.get("collaborators").get.asInstanceOf[Map[String, Any]]
-      }
+      //if(collaboratorsInfo != null) {
+       // val collaboratorsInfo = repo.get("collaborators").get.asInstanceOf[Map[String, Any]]
+      //}
 
       //Getting commits info
-      if(repo.get("commits").get != null) {
+      if(commitsInfo != null) {
         val commitsInfo = repo.get("commits").get.asInstanceOf[Map[String, Any]]
         val target = commitsInfo.get("target").get.asInstanceOf[Map[String, Any]]
         val history = target.get("history").get.asInstanceOf[Map[String, Any]]
@@ -451,7 +455,7 @@ class QueryCommand(repo: String = "",
       }
 
       //Getting issues info
-      if(repo.get("issues").get != null){
+      if(issuesInfo != null){
         val issuesInfo = repo.get("issues").get.asInstanceOf[Map[String, Any]]
 
         val issuesCount = issuesInfo.get("totalCount").get
