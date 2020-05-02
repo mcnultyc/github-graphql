@@ -666,7 +666,8 @@ class QueryCommand(repo: String = "",
           s"{totalCount ${nodes(fields(starGazersInfo))}}"
       }
     }
-    if(collaboratorsInfo != null){
+    // Collaborators isn't available for other users repositories
+    if(collaboratorsInfo != null && owner == ""){
       if(!paginate || (paginate && cursors.get("collaborators") != None)){
         // Add json for collaborators
         complexFields += s" collaborators${args(cursors.getOrElse("collaborators",""))}" +

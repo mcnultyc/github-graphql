@@ -19,13 +19,13 @@ object Driver {
       .build
 
     val query: QueryCommand = QueryBuilder()
-      .withRepoOwner("shell", "sarthak77")
+      .withRepoOwner("linux", "torvalds")
       .withAuth(github)
-      .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+      //.withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
       .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
-      .withCommits(List(CommitInfo.AUTHOR))
-      .withIssues(List(IssueInfo.AUTHOR))
-      .withLanguages(List(LanguageInfo.NAME))
+      //.withCommits(List(CommitInfo.AUTHOR))
+      //.withIssues(List(IssueInfo.AUTHOR))
+      //.withLanguages(List(LanguageInfo.NAME))
       .build
   }
 }
