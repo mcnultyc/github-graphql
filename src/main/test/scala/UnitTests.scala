@@ -22,52 +22,60 @@ object UnitTests {
       .withHeaders(List((ACCEPT, APP_JSON)))
       .build
 
-    val console = new ByteArrayOutputStream() //new console for System.out to be sent to
-    System.setOut(new PrintStream(console))
+    val console1: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console1) {
 
-    val query: QueryCommand = QueryBuilder()
-      .withRepoOwner("shell", "sarthak77", List())
-      .withAuth(github)
-      .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
-      .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
-      .withCommits(List(CommitInfo.AUTHOR))
-      .withIssues(List(IssueInfo.AUTHOR))
-      .withLanguages(List(LanguageInfo.NAME))
-      .build
+      val query: QueryCommand = QueryBuilder()
+        .withRepoOwner("shell", "sarthak77", List())
+        .withAuth(github)
+        .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+        .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
+        .withCommits(List(CommitInfo.AUTHOR))
+        .withIssues(List(IssueInfo.AUTHOR))
+        .withLanguages(List(LanguageInfo.NAME))
+        .build
+    }
 
-    assertFalse(console.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
+    assertFalse(console1.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
 
-    //Now testing with an archived repo + minimal query options
-    val query2: QueryCommand = QueryBuilder()
-      .withRepoOwner("practice", "rtonki2", List())
-      .withAuth(github)
-      .build
 
-    assertFalse(console.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
+    val console2: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console2) {
+      //Now testing with an archived repo + minimal query options
+      val query2: QueryCommand = QueryBuilder()
+        .withRepoOwner("practice", "rtonki2", List())
+        .withAuth(github)
+        .build
+    }
+    assertFalse(console2.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
 
-    //different settings, different repo
-    val query3: QueryCommand = QueryBuilder()
-      .withRepoOwner("Python", "TheAlgorithms", List())
-      .withAuth(github)
-      .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
-      .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
-      .withLanguages(List(LanguageInfo.NAME))
-      .build
+    val console3: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console3) {
+      //different settings, different repo
+      val query3: QueryCommand = QueryBuilder()
+        .withRepoOwner("Python", "TheAlgorithms", List())
+        .withAuth(github)
+        .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+        .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
+        .withLanguages(List(LanguageInfo.NAME))
+        .build
+    }
+    assertFalse(console3.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
 
-    assertFalse(console.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
-
-    //Make sure an improper query does cause error we're testing for
-    val query4: QueryCommand = QueryBuilder()
-      .withRepoOwner("\"shell\"", "sarthak77", List())
-      .withAuth(github)
-      .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
-      .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
-      .withCommits(List(CommitInfo.AUTHOR))
-      .withIssues(List(IssueInfo.AUTHOR))
-      .withLanguages(List(LanguageInfo.NAME))
-      .build
-
-    assertTrue(console.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
+    val console4: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console4) {
+      //Make sure an improper query does cause error we're testing for
+      val query4: QueryCommand = QueryBuilder()
+        .withRepoOwner("\"shell\"", "sarthak77", List())
+        .withAuth(github)
+        .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+        .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
+        .withCommits(List(CommitInfo.AUTHOR))
+        .withIssues(List(IssueInfo.AUTHOR))
+        .withLanguages(List(LanguageInfo.NAME))
+        .build
+    }
+    assertTrue(console4.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
   }
 
   @Test
@@ -86,19 +94,20 @@ object UnitTests {
 
     var fail = false
 
-    val console1 = new ByteArrayOutputStream() //new console for System.out to be sent to
-    val old = System.out
-    System.setOut(new PrintStream(console1))
+    val console1: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console1) {
 
-    val query: QueryCommand = QueryBuilder()
-      .withRepoOwner("linux", "torvalds", List())
-      .withAuth(github)
-      .build
+      val query: QueryCommand = QueryBuilder()
+        .withRepoOwner("linux", "torvalds", List())
+        .withAuth(github)
+        .build
+
+    }
 
     //strip console output down to important values
     if(console1.toString().contains("Repo Info"))
     {
-      val trimmed = console1.toString().split("\n").apply(4)
+      val trimmed = console1.toString().split("\n").apply(1)
 
       val name = trimmed.split(":").apply(1)
       assertEquals(name, " linux, Created")
@@ -110,99 +119,95 @@ object UnitTests {
     {
       fail = true;
     }
-    System.out.flush()
-    System.setOut(old)
 
-    val console2 = new ByteArrayOutputStream() //new console for System.out to be sent to
-    System.setOut(new PrintStream(console2))
+    val console2: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console2) {
 
-    val query2: QueryCommand = QueryBuilder()
-      .withRepoOwner("linux", "torvalds", List())
-      .withAuth(github)
-      .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
-      .build
+      val query2: QueryCommand = QueryBuilder()
+        .withRepoOwner("Chord-Protocol-for-Overlay-Network", "AmrutaB26", List())
+        .withAuth(github)
+        .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+        .build
+    }
 
     //strip console output down to important values
     if(console2.toString().contains("Repo Info"))
     {
-      val trimmed = console1.toString().split("\n").apply(5)
+      val trimmed = console2.toString().split("\n").apply(2)
 
       val count = trimmed.split(":").apply(1)
-      assertEquals(count, " 3213, Nodes")
+      assertEquals(" 1, Nodes", count)
 
     }
     else
     {
       fail = true;
     }
-    System.out.flush()
-    System.setOut(old)
 
-    val console3 = new ByteArrayOutputStream() //new console for System.out to be sent to
-    System.setOut(new PrintStream(console3))
+    val console3: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console3) {
 
-    val query3: QueryCommand = QueryBuilder()
-      .withRepoOwner("linux", "torvalds", List())
-      .withAuth(github)
-      .withCommits(List(CommitInfo.AUTHOR))
-      .build
+      val query3: QueryCommand = QueryBuilder()
+        .withRepoOwner("Chord-Protocol-for-Overlay-Network", "AmrutaB26", List())
+        .withAuth(github)
+        .withCommits(List(CommitInfo.AUTHOR))
+        .build
+    }
 
     //strip console output down to important values
     if(console3.toString().contains("Repo Info"))
     {
-      val trimmed = console1.toString().split("\n").apply(5)
+      val trimmed = console3.toString().split("\n").apply(2)
 
       val count = trimmed.split(":").apply(1)
-      assertEquals(count, " 916348, Authors")
+      assertEquals(" 19, Authors", count)
 
     }
     else
     {
       fail = true;
     }
-    System.out.flush()
-    System.setOut(old)
 
-    val console4 = new ByteArrayOutputStream() //new console for System.out to be sent to
-    System.setOut(new PrintStream(console4))
+    val console4: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console4) {
 
-    val query4: QueryCommand = QueryBuilder()
-      .withRepoOwner("linux", "torvalds", List())
-      .withAuth(github)
-      .withIssues(List(IssueInfo.AUTHOR))
-      .build
+      val query4: QueryCommand = QueryBuilder()
+        .withRepoOwner("Chord-Protocol-for-Overlay-Network", "AmrutaB26", List())
+        .withAuth(github)
+        .withIssues(List(IssueInfo.AUTHOR))
+        .build
+    }
 
     //strip console output down to important values
     if(console4.toString().contains("Repo Info"))
     {
-      val trimmed = console1.toString().split("\n").apply(5)
+      val trimmed = console4.toString().split("\n").apply(2)
 
       val count = trimmed.split(":").apply(1)
-      assertEquals(count, "0")
+      assertEquals(" 0, Nodes", count)
     }
     else
     {
       fail = true;
     }
-    System.out.flush()
-    System.setOut(old)
 
-    val console5 = new ByteArrayOutputStream() //new console for System.out to be sent to
-    System.setOut(new PrintStream(console5))
+    val console5: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console5) {
 
-    val query5: QueryCommand = QueryBuilder()
-      .withRepoOwner("linux", "torvalds", List())
-      .withAuth(github)
-      .withLanguages(List(LanguageInfo.NAME))
-      .build
+      val query5: QueryCommand = QueryBuilder()
+        .withRepoOwner("linux", "torvalds", List())
+        .withAuth(github)
+        .withLanguages(List(LanguageInfo.NAME))
+        .build
+    }
 
     //strip console output down to important values
     if(console5.toString().contains("Repo Info"))
     {
-      val trimmed = console1.toString().split("\n").apply(5)
+      val trimmed = console5.toString().split("\n").apply(2)
 
       val count = trimmed.split(":").apply(1)
-      assertEquals(count, " 20, Type of Languages")
+      assertEquals(" 20, Type of Languages", count)
     }
     else
     {

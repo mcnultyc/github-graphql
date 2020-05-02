@@ -238,8 +238,10 @@ class QueryCommand(repo: String = "",
 
     val view = parse(response).extract[Map[String, Any]]
 
-    val data = view.get("data").get.asInstanceOf[Map[String, Any]]
-
+    if(view.get("data").isEmpty) {
+      return
+    }
+      val data = view.get("data").get.asInstanceOf[Map[String, Any]]
     //println(view)
 
     // Query repository for another user
