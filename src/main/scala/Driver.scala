@@ -1,7 +1,6 @@
 
-import java.io.{ByteArrayOutputStream, PrintStream}
+import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
 
-import com.sun.org.slf4j.internal.LoggerFactory
 import com.typesafe.config.ConfigFactory
 
 import org.slf4j.{Logger, LoggerFactory}
@@ -10,7 +9,7 @@ object Driver {
 
   val c = ConfigFactory.load()
   val conf = c.getConfig("GQL")
-  //val logger = LoggerFactory.getLogger(Driver.getClass)
+  val logger = LoggerFactory.getLogger(Driver.getClass)
 
   def main(args: Array[String]): Unit = {
 
