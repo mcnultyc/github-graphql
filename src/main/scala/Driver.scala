@@ -3,8 +3,6 @@ import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
 
 import com.typesafe.config.ConfigFactory
 
-import org.slf4j.{Logger, LoggerFactory}
-
 object Driver {
 
   val c = ConfigFactory.load()
@@ -22,6 +20,7 @@ object Driver {
       .withHeaders(List((ACCEPT, APP_JSON)))
       .build
 
+    /*
     val query: QueryCommand = QueryBuilder()
       .withRepoOwner("linux", "torvalds")
       .withAuth(github)
@@ -31,5 +30,37 @@ object Driver {
       .withIssues(List(IssueInfo.AUTHOR))
       .withLanguages(List(LanguageInfo.NAME))
       .build
+
+     */
+  /*
+    val query: QueryCommand = QueryBuilder()
+      .withRepo("Phone-List-App")
+      .withAuth(github)
+      .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+      .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
+      .withCommits(List(CommitInfo.AUTHOR))
+      .withIssues(List(IssueInfo.AUTHOR))
+      .withLanguages(List(LanguageInfo.NAME))
+      .build
+
+   */
+
+       val allIssues = IssueInfo.values.toList
+    val allCommits = CommitInfo.values.toList
+    val allUsers = UserInfo.values.toList
+    val allLangs = LanguageInfo.values.toList
+    val allRepo = RepoInfo.values.toList
+
+
+    val query: QueryCommand = QueryBuilder()
+      .withRepos(allRepo)
+      .withAuth(github)
+      .withStarGazers(allUsers)
+      .withCollaborators(allUsers)
+      .withCommits(allCommits)
+      .withIssues(allIssues)
+      .withLanguages(allLangs)
+      .build
+
   }
 }
