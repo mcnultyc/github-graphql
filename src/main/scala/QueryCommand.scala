@@ -171,7 +171,7 @@ class QueryCommand(repo: String = "",
                    authorizer: GitHub = null){
 
   val logger = LoggerFactory.getLogger(this.getClass)
-
+  var queryVal = "" //for testing purposes
   // Execute the graph-ql query
   execute()
 
@@ -184,6 +184,7 @@ class QueryCommand(repo: String = "",
     val client = HttpClientBuilder.create().build()
     // Create graph-ql query
     val query = createQuery()
+    queryVal = query
     // Create http entity with graph-ql query
     val entity = new StringEntity(s"""{"query":"$query"}""" , ContentType.APPLICATION_JSON)
 
@@ -309,16 +310,19 @@ class QueryCommand(repo: String = "",
 
         val stargazersCount = stargazersInfo.get("totalCount").get
 
-        val stargazers = stargazersInfo.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
+        var stargazers: List[Map[String, Any]] = null
+        if (stargazersInfo.get("nodes").nonEmpty) {
+          stargazers = stargazersInfo.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
 
-        val stargazers_pageInfo = stargazersInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
+          val stargazers_pageInfo = stargazersInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
-        if (stargazers_pageInfo.get("hasNextPage").get == true) {
-           endCursorMap += ("stargazers" -> stargazers_pageInfo.get("endCursor").get.toString)
+          if (stargazers_pageInfo.get("hasNextPage").get == true) {
+            endCursorMap += ("stargazers" -> stargazers_pageInfo.get("endCursor").get.toString)
+          }
+
+          println("Stargazers Info -> " + "Count: " + stargazersCount + ", Nodes: " + stargazers)
+
         }
-
-        println("Stargazers Info -> " + "Count: " + stargazersCount + ", Nodes: " + stargazers)
-
       }
 
       //TODO: Does not work, we need permission
@@ -330,28 +334,34 @@ class QueryCommand(repo: String = "",
       //Getting commits info
       if(commitsInfo != null) {
         val commitsInfo = repo.get("commits").get.asInstanceOf[Map[String, Any]]
-        val target = commitsInfo.get("target").get.asInstanceOf[Map[String, Any]]
-        val history = target.get("history").get.asInstanceOf[Map[String, Any]]
 
-        val commitsCount = history.get("totalCount").get
+        //if commitsInfo doesnt have a target, then theres no commit info to retrieve
+        if(commitsInfo != null) {
+          val target = commitsInfo.get("target").get.asInstanceOf[Map[String, Any]]
+          val history = target.get("history").get.asInstanceOf[Map[String, Any]]
 
-        val commitNodes = history.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
+          val commitsCount = history.get("totalCount").get
 
-        var authorList = List[Map[String, Any]]()
+          val commitNodes = history.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
 
-        for (element <- commitNodes) {
-          val author = element.get("author")
-          authorList = author.get.asInstanceOf[Map[String, Any]] :: authorList
-        }
+          var authorList = List[Map[String, Any]]()
 
-        val commits_pageInfo = history.get("pageInfo").get.asInstanceOf[Map[String, Any]]
+          for (element <- commitNodes) {
+            val author = element.get("author")
+            authorList = author.get.asInstanceOf[Map[String, Any]] :: authorList
+          }
+
+          val commits_pageInfo = history.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
         if (commits_pageInfo.get("hasNextPage").get == true) {
            endCursorMap += ("commits" -> commits_pageInfo.get("endCursor").get.toString)
         }
 
-        println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
-
+          println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
+        }
+        else {
+          println("Commits Info -> " + "Count: " + 0)
+        }
       }
 
       //Getting issues info
@@ -575,9 +585,9 @@ class QueryCommand(repo: String = "",
        }
 
        //Getting commits info
-       if(commitsInfo != null) {
-         val commitsInfo = element.get("commits").get.asInstanceOf[Map[String, Any]]
-         val target = commitsInfo.get("target").get.asInstanceOf[Map[String, Any]]
+       if(commitsInfo != null && element.get("commits").nonEmpty) {
+         val commits = element.get("commits").get.asInstanceOf[Map[String, Any]]
+         val target = commits.get("target").get.asInstanceOf[Map[String, Any]]
          val history = target.get("history").get.asInstanceOf[Map[String, Any]]
 
          val commitsCount = history.get("totalCount").get
