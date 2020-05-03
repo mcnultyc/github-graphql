@@ -4,12 +4,6 @@ import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
 import com.typesafe.config.ConfigFactory
 import org.slf4j.{Logger, LoggerFactory}
 
-import org.json4s.DefaultFormats
-import org.json4s._
-import org.json4s.jackson.JsonMethods.{parse, _}
-
-
-
 object Driver {
 
   val c = ConfigFactory.load()
