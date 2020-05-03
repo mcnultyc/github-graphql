@@ -522,12 +522,16 @@ class QueryCommand(repo: String = "",
       //Getting the repositories information
       val repos = viewer.get("repositories").get.asInstanceOf[Map[String, Any]]
       val numRepos = repos.get("totalCount").get.toString.toInt
+
+      var counter = 0
+
       println("# of repos: " + numRepos)
       println("---------------------------------------------------------------------------------------------------------------------------------------------")
 
       val nodes = repos.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
 
      for(element<-nodes){
+       counter = counter + 1
        val createdInfo = element.get("createdAt").get
 
        val repoName = element.get("name").get
@@ -553,7 +557,7 @@ class QueryCommand(repo: String = "",
          val languages_pageInfo = languageInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
          if (languages_pageInfo.get("hasNextPage").get == true) {
-            endCursorMap += ("languages" -> languages_pageInfo.get("endCursor").get.toString)
+            endCursorMap += ("languages" + counter -> languages_pageInfo.get("endCursor").get.toString)
          }
 
          println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
@@ -572,7 +576,7 @@ class QueryCommand(repo: String = "",
          val stargazers_pageInfo = stargazersInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
          if (stargazers_pageInfo.get("hasNextPage").get == true) {
-            endCursorMap += ("stargazers" -> stargazers_pageInfo.get("endCursor").get.toString)
+            endCursorMap += ("stargazers" + counter -> stargazers_pageInfo.get("endCursor").get.toString)
          }
 
          println("Stargazers Info -> " + "Count: " + stargazersCount + ", Nodes: " + stargazers)
@@ -605,7 +609,7 @@ class QueryCommand(repo: String = "",
          val commits_pageInfo = history.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
          if (commits_pageInfo.get("hasNextPage").get == true) {
-            endCursorMap += ("commits" -> commits_pageInfo.get("endCursor").get.toString)
+            endCursorMap += ("commits" + counter -> commits_pageInfo.get("endCursor").get.toString)
          }
 
          println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
@@ -623,7 +627,7 @@ class QueryCommand(repo: String = "",
          val issues_pageInfo = issuesInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
          if (issues_pageInfo.get("hasNextPage").get == true) {
-            endCursorMap += ("issues" -> issues_pageInfo.get("endCursor").get.toString)
+            endCursorMap += ("issues" + counter-> issues_pageInfo.get("endCursor").get.toString)
          }
 
          println("Issues Info -> " + "Count: " + issuesCount + ", Nodes: " + issuesNodes)
