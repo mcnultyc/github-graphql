@@ -12,7 +12,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.slf4j.{Logger, LoggerFactory}
 
 
-// Exception for github graphql connections
+// Exception for github graph-ql connections
 case class GitHubConnectionException(status: String, message:String) extends Exception{}
 // Case classes for parsing response with errors
 case class Error(message:String)
@@ -236,7 +236,8 @@ class QueryCommand(repo: String = "",
 
 
         println(json)
-        parseResponse(json)
+        val cursors = parseResponse(json)
+        println(cursors)
         loop.break()
         // TODO - finish pagination
         /*
