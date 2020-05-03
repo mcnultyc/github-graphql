@@ -11,7 +11,12 @@ import scala.io.Source.fromInputStream
 import com.typesafe.config.{Config, ConfigFactory}
 import org.slf4j.{Logger, LoggerFactory}
 
-//import scala.collection.mutable.Map
+
+// Exception for github graphql connections
+case class GitHubConnectionException(status: String, message:String) extends Exception{}
+// Case classes for parsing response with errors
+case class Error(message:String)
+case class Data(data:AnyRef, errors:List[Error])
 
 
 // Optional fields for commits
@@ -202,6 +207,8 @@ class QueryCommand(repo: String = "",
         logger.info("executing http post request")
         // Execute request
         val response = client.execute(request)
+        // Log http status line from response
+        logger.info(s"http status: ${response.getStatusLine}")
 
         // Get json from response content
         val json =
@@ -211,6 +218,21 @@ class QueryCommand(repo: String = "",
               fromInputStream(x.getContent).getLines.mkString
             }
           }
+
+        implicit val formats = DefaultFormats
+        val dataOpt = parse(json).extractOpt[Data]
+        if(!dataOpt.isEmpty){
+          val data = dataOpt.get
+          val statusCode = response.getStatusLine.getStatusCode
+          // Check for http OK status and errors in graph-ql errors
+          if(data.errors.size > 0 || statusCode != 200){
+            val status = response.getStatusLine.toString
+            val messages = data.errors.map(x => x.message).mkString("\n")
+            // Throw exception for http status and graph-ql errors
+            throw new GitHubConnectionException(status, messages)
+          }
+        }
+
 
         println(json)
         parseResponse(json) // TODO - getting exceptions here
