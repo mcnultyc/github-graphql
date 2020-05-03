@@ -235,7 +235,7 @@ class QueryCommand(repo: String = "",
 
 
         println(json)
-        parseResponse(json) // TODO - getting exceptions here
+        parseResponse(json)
         loop.break()
         // TODO - finish pagination
         /*
@@ -250,15 +250,16 @@ class QueryCommand(repo: String = "",
     }
   }
 
-
-  private def parseResponse(response: String): Unit ={
+  private def parseResponse(response: String): scala.collection.mutable.Map[String, String] ={
 
     implicit val formats = DefaultFormats
+
+    var endCursorMap = scala.collection.mutable.Map[String, String]()
 
     val view = parse(response).extract[Map[String, Any]]
 
     if(view.get("data").isEmpty) {
-      return
+      return endCursorMap
     }
       val data = view.get("data").get.asInstanceOf[Map[String, Any]]
     //println(view)
@@ -277,8 +278,6 @@ class QueryCommand(repo: String = "",
 
       println("Repo Info -> " + "Name: " + repoName + ", Created: " + createdInfo + ", Desc: " + repoDesc)
 
-      val endCursorMap = Map[String, String]()
-
       //Getting language info
       if(languagesInfo != null) {
         val languageInfo = repo.get("languages").get.asInstanceOf[Map[String, Any]]
@@ -296,7 +295,7 @@ class QueryCommand(repo: String = "",
         val languages_pageInfo = languageInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
         if (languages_pageInfo.get("hasNextPage").get == true) {
-          // endCursorMap.addOne("languages" -> languages_pageInfo.get("endCursor").get.toString)
+           endCursorMap += ("languages" -> languages_pageInfo.get("endCursor").get.toString)
         }
 
         println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
@@ -315,7 +314,7 @@ class QueryCommand(repo: String = "",
         val stargazers_pageInfo = stargazersInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
         if (stargazers_pageInfo.get("hasNextPage").get == true) {
-          // endCursorMap.addOne("stargazers" -> stargazers_pageInfo.get("endCursor").get.toString)
+           endCursorMap += ("stargazers" -> stargazers_pageInfo.get("endCursor").get.toString)
         }
 
         println("Stargazers Info -> " + "Count: " + stargazersCount + ", Nodes: " + stargazers)
@@ -348,7 +347,7 @@ class QueryCommand(repo: String = "",
         val commits_pageInfo = history.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
         if (commits_pageInfo.get("hasNextPage").get == true) {
-          // endCursorMap.addOne("commits" -> commits_pageInfo.get("endCursor").get.toString)
+           endCursorMap += ("commits" -> commits_pageInfo.get("endCursor").get.toString)
         }
 
         println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
@@ -366,12 +365,14 @@ class QueryCommand(repo: String = "",
         val issues_pageInfo = issuesInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
         if (issues_pageInfo.get("hasNextPage").get == true) {
-          // endCursorMap.addOne("issues" -> issues_pageInfo.get("endCursor").get.toString)
+           endCursorMap += ("issues" -> issues_pageInfo.get("endCursor").get.toString)
         }
 
         println("Issues Info -> " + "Count: " + issuesCount + ", Nodes: " + issuesNodes)
 
       }
+
+      return endCursorMap
 
       //Getting errors info
      // if(repo.get("errors").get != null){
@@ -398,8 +399,6 @@ class QueryCommand(repo: String = "",
 
       println("Repo Info -> " + "Name: " + repoName + ", Created: " + createdInfo + ", Desc: " + repoDesc)
 
-      val endCursorMap = Map[String, String]()
-
       //Getting language info
       if(languagesInfo != null || languageInfo != null) {
         val languageInfo = repo.get("languages").get.asInstanceOf[Map[String, Any]]
@@ -417,7 +416,7 @@ class QueryCommand(repo: String = "",
         val languages_pageInfo = languageInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
         if (languages_pageInfo.get("hasNextPage").get == true) {
-          // endCursorMap.addOne("languages" -> languages_pageInfo.get("endCursor").get.toString)
+           endCursorMap += ("languages" -> languages_pageInfo.get("endCursor").get.toString)
         }
 
         println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
@@ -436,7 +435,7 @@ class QueryCommand(repo: String = "",
         val stargazers_pageInfo = stargazersInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
         if (stargazers_pageInfo.get("hasNextPage").get == true) {
-          // endCursorMap.addOne("stargazers" -> stargazers_pageInfo.get("endCursor").get.toString)
+           endCursorMap += ("stargazers" -> stargazers_pageInfo.get("endCursor").get.toString)
         }
 
         println("Stargazers Info -> " + "Count: " + stargazersCount + ", Nodes: " + stargazers)
@@ -468,7 +467,7 @@ class QueryCommand(repo: String = "",
         val commits_pageInfo = history.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
         if (commits_pageInfo.get("hasNextPage").get == true) {
-          // endCursorMap.addOne("commits" -> commits_pageInfo.get("endCursor").get.toString)
+           endCursorMap += ("commits" -> commits_pageInfo.get("endCursor").get.toString)
         }
 
         println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
@@ -486,12 +485,14 @@ class QueryCommand(repo: String = "",
         val issues_pageInfo = issuesInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
         if (issues_pageInfo.get("hasNextPage").get == true) {
-          // endCursorMap.addOne("issues" -> issues_pageInfo.get("endCursor").get.toString)
+           endCursorMap += ("issues" -> issues_pageInfo.get("endCursor").get.toString)
         }
 
         println("Issues Info -> " + "Count: " + issuesCount + ", Nodes: " + issuesNodes)
 
       }
+
+      return endCursorMap
 
       //Getting errors info
       // if(repo.get("errors").get != null){
@@ -524,8 +525,6 @@ class QueryCommand(repo: String = "",
 
        println("Repo Info -> " + "Name: " + repoName + ", Created: " + createdInfo + ", Desc: " + repoDesc)
 
-       val endCursorMap = Map[String, String]()
-
        //Getting language info
        if(languagesInfo != null || languageInfo != null) {
          val languageInfo = element.get("languages").get.asInstanceOf[Map[String, Any]]
@@ -543,7 +542,7 @@ class QueryCommand(repo: String = "",
          val languages_pageInfo = languageInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
          if (languages_pageInfo.get("hasNextPage").get == true) {
-           // endCursorMap.addOne("languages" -> languages_pageInfo.get("endCursor").get.toString)
+            endCursorMap += ("languages" -> languages_pageInfo.get("endCursor").get.toString)
          }
 
          println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
@@ -562,7 +561,7 @@ class QueryCommand(repo: String = "",
          val stargazers_pageInfo = stargazersInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
          if (stargazers_pageInfo.get("hasNextPage").get == true) {
-           // endCursorMap.addOne("stargazers" -> stargazers_pageInfo.get("endCursor").get.toString)
+            endCursorMap += ("stargazers" -> stargazers_pageInfo.get("endCursor").get.toString)
          }
 
          println("Stargazers Info -> " + "Count: " + stargazersCount + ", Nodes: " + stargazers)
@@ -595,7 +594,7 @@ class QueryCommand(repo: String = "",
          val commits_pageInfo = history.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
          if (commits_pageInfo.get("hasNextPage").get == true) {
-           // endCursorMap.addOne("commits" -> commits_pageInfo.get("endCursor").get.toString)
+            endCursorMap += ("commits" -> commits_pageInfo.get("endCursor").get.toString)
          }
 
          println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
@@ -613,7 +612,7 @@ class QueryCommand(repo: String = "",
          val issues_pageInfo = issuesInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
          if (issues_pageInfo.get("hasNextPage").get == true) {
-           // endCursorMap.addOne("issues" -> issues_pageInfo.get("endCursor").get.toString)
+            endCursorMap += ("issues" -> issues_pageInfo.get("endCursor").get.toString)
          }
 
          println("Issues Info -> " + "Count: " + issuesCount + ", Nodes: " + issuesNodes)
@@ -623,6 +622,8 @@ class QueryCommand(repo: String = "",
        println("-----------------------------------------------------------------------------------------------------------------------------------")
 
      }//End of every repo for loop
+
+      return endCursorMap
 
     }//End of all repositories
 
