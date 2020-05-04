@@ -267,7 +267,6 @@ class QueryCommand(repo: String = "",
       return endCursorMap
     }
       val data = view.get("data").get.asInstanceOf[Map[String, Any]]
-    //println(view)
 
     // Query repository for another user
     if(repo != "" && owner != ""){
@@ -526,15 +525,12 @@ class QueryCommand(repo: String = "",
       val repos = viewer.get("repositories").get.asInstanceOf[Map[String, Any]]
       val numRepos = repos.get("totalCount").get.toString.toInt
 
-      var counter = 0
-
       println("# of repos: " + numRepos)
       println("---------------------------------------------------------------------------------------------------------------------------------------------")
 
       val nodes = repos.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
 
      for(element<-nodes){
-       counter = counter + 1
        val createdInfo = element.get("createdAt").get
 
        val repoName = element.get("name").get
@@ -560,7 +556,7 @@ class QueryCommand(repo: String = "",
          val languages_pageInfo = languageInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
          if (languages_pageInfo.get("hasNextPage").get == true) {
-            endCursorMap += (repoName.toString -> Map("languages" + counter -> languages_pageInfo.get("endCursor").get.toString))
+            endCursorMap += (repoName.toString -> Map("languages" -> languages_pageInfo.get("endCursor").get.toString))
          }
 
          println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
@@ -579,7 +575,7 @@ class QueryCommand(repo: String = "",
          val stargazers_pageInfo = stargazersInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
          if (stargazers_pageInfo.get("hasNextPage").get == true) {
-            endCursorMap += (repoName.toString -> Map("stargazers" + counter -> stargazers_pageInfo.get("endCursor").get.toString))
+            endCursorMap += (repoName.toString -> Map("stargazers" -> stargazers_pageInfo.get("endCursor").get.toString))
          }
 
          println("Stargazers Info -> " + "Count: " + stargazersCount + ", Nodes: " + stargazers)
@@ -612,7 +608,7 @@ class QueryCommand(repo: String = "",
          val commits_pageInfo = history.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
          if (commits_pageInfo.get("hasNextPage").get == true) {
-            endCursorMap += (repoName.toString -> Map("commits" + counter -> commits_pageInfo.get("endCursor").get.toString))
+            endCursorMap += (repoName.toString -> Map("commits" -> commits_pageInfo.get("endCursor").get.toString))
          }
 
          println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
@@ -630,7 +626,7 @@ class QueryCommand(repo: String = "",
          val issues_pageInfo = issuesInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
 
          if (issues_pageInfo.get("hasNextPage").get == true) {
-            endCursorMap += (repoName.toString -> Map("issues" + counter-> issues_pageInfo.get("endCursor").get.toString))
+            endCursorMap += (repoName.toString -> Map("issues" -> issues_pageInfo.get("endCursor").get.toString))
          }
 
          println("Issues Info -> " + "Count: " + issuesCount + ", Nodes: " + issuesNodes)
@@ -688,7 +684,7 @@ class QueryCommand(repo: String = "",
     var complexFields = ""
 
     // Check if user requested primary language info
-    if(languageInfo != null && languagesInfo.length != 0){
+    if(languageInfo != null && languagesInfo != null && languagesInfo.length != 0){
       // Add json for primary language
       complexFields += s" primaryLanguage ${fields(languageInfo)}"
     }
