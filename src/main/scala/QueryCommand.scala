@@ -19,6 +19,12 @@ case class GitHubConnectionException(status: String, message:String) extends Exc
 case class Error(message:String)
 case class Data(data:AnyRef, errors:List[Error])
 
+// Fields for repository info
+object FieldsInfo extends Enumeration{
+  type FieldsInfo = Value
+  val COMMITS = Value("commits")
+}
+
 
 // Optional fields for commits
 object CommitInfo extends Enumeration{
@@ -37,6 +43,11 @@ object LanguageInfo extends Enumeration{
   type LanguageInfo = Value
   val COLOR = Value("color")
   val NAME  = Value("name")
+
+  def comp[A](key: String, value: A, func:(A) => Boolean):Boolean ={
+
+    true
+  }
 }
 
 
@@ -83,6 +94,7 @@ import LanguageInfo.LanguageInfo
 import UserInfo.UserInfo
 import IssueInfo.IssueInfo
 import RepoInfo.RepoInfo
+import FieldsInfo.FieldsInfo
 
 sealed trait QueryInfo
 object QueryInfo{
@@ -663,6 +675,14 @@ class QueryCommand(repo: String = "",
     }//End of all repositories
 
   }//End of parseResponse()
+
+  def filter[A](key: CommitInfo, func:(A) => Boolean):QueryCommand ={
+    this
+  }
+
+  def filter[A](key: IssueInfo, func:(A) => Boolean):QueryCommand ={
+    this
+  }
 
 
 

@@ -10,7 +10,9 @@ object Driver {
   val conf = c.getConfig("GQL")
   val logger = LoggerFactory.getLogger(Driver.getClass)
 
+
   def main(args: Array[String]): Unit = {
+
 
     val TOKEN = conf.getString("AUTHKEY")
     val ACCEPT = conf.getString("ACCEPT")
@@ -64,6 +66,16 @@ object Driver {
         .withIssues(allIssues)
         .withLanguages(allLangs)
         .build
+
+      query.filter(CommitInfo.AUTHOR, (x: String) => {
+        if(x == "mcnultyc"){
+          true
+        }
+        else{
+          false
+        }
+      })
+
     }
     catch{
       case e: GitHubConnectionException => {
