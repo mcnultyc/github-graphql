@@ -10,6 +10,52 @@ import com.typesafe.config.ConfigFactory
 //         first ensure that the expected values written here are up to date.
 object UnitTests {
 
+  //Test the query string building functionality
+  //Note*** This test expects config limit = 100
+  @Test
+  def testCreateQuery(): Unit = {
+    val c = ConfigFactory.load()
+    val conf = c.getConfig("GQL")
+
+    val TOKEN = conf.getString("AUTHKEY")
+    val ACCEPT = conf.getString("ACCEPT")
+    val APP_JSON = conf.getString("APPJSON")
+
+    val github: GitHub = GitHubBuilder()
+      .withAuth(TOKEN)
+      .withHeaders(List((ACCEPT, APP_JSON)))
+      .build
+
+    val query: QueryCommand = QueryBuilder()
+      .withRepoOwner("shell", "sarthak77", List())
+      .withAuth(github)
+      .build
+
+    assertEquals("query{repository(name: \\\"shell\\\", owner: \\\"sarthak77\\\") {createdAt name description }}", query.queryVal)
+
+    val query2: QueryCommand = QueryBuilder()
+      .withRepoOwner("Python", "TheAlgorithms", List())
+      .withAuth(github)
+      .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+      .withLanguages(List(LanguageInfo.NAME))
+      .build
+
+    assertEquals("query{repository(name: \\\"Python\\\", owner: \\\"TheAlgorithms\\\") {createdAt name description  languages (first:100){totalCount  nodes {name} pageInfo{endCursor hasNextPage}} stargazers (first:100){totalCount  nodes {name email} pageInfo{endCursor hasNextPage}}}}", query2.queryVal);
+
+    val query3: QueryCommand = QueryBuilder()
+      .withRepoOwner("practice", "rtonki2", List())
+      .withAuth(github)
+      .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+      .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
+      .withCommits(List(CommitInfo.AUTHOR))
+      .withIssues(List(IssueInfo.AUTHOR))
+      .withLanguages(List(LanguageInfo.NAME))
+      .build
+
+    assertEquals("query{repository(name: \\\"practice\\\", owner: \\\"rtonki2\\\") {createdAt name description  languages (first:100){totalCount  nodes {name} pageInfo{endCursor hasNextPage}} stargazers (first:100){totalCount  nodes {name email} pageInfo{endCursor hasNextPage}}" +
+      " commits: defaultBranchRef{target{... on Commit{  history (first:100){totalCount  nodes {author{name}} pageInfo{endCursor hasNextPage}}}}} issues (first:100){totalCount  nodes {author{login}} pageInfo{endCursor hasNextPage}}}}", query3.queryVal);
+  }
+
   //test that properly executed querys return without error
   @Test
   def testReturnNoError(): Unit = {
@@ -236,7 +282,6 @@ object UnitTests {
     assertEquals(false, fail)
   }
 
-
   //Test handling of multiple returned pages of information
   @Test
   def testPagination(): Unit = {
@@ -321,10 +366,9 @@ object UnitTests {
     assertEquals(false, fail)
   }
 
-  //Test the query string building functionality
-  //Note*** This test expects config limit = 100
+  //Testing various queries with an empty repository to test robustness of code
   @Test
-  def testCreateQuery(): Unit = {
+  def testEmptyRepo(): Unit = {
     val c = ConfigFactory.load()
     val conf = c.getConfig("GQL")
 
@@ -337,33 +381,71 @@ object UnitTests {
       .withHeaders(List((ACCEPT, APP_JSON)))
       .build
 
-    val query: QueryCommand = QueryBuilder()
-      .withRepoOwner("shell", "sarthak77", List())
-      .withAuth(github)
-      .build
+    val console1: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console1) {
 
-    assertEquals("query{repository(name: \\\"shell\\\", owner: \\\"sarthak77\\\") {createdAt name description }}", query.queryVal)
+      val query: QueryCommand = QueryBuilder()
+        .withRepoOwner("practice", "rtonki2", List())
+        .withAuth(github)
+        .build
+    }
 
-    val query2: QueryCommand = QueryBuilder()
-      .withRepoOwner("Python", "TheAlgorithms", List())
-      .withAuth(github)
-      .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
-      .withLanguages(List(LanguageInfo.NAME))
-      .build
+    assertFalse(console1.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}")) //error message
 
-    assertEquals("query{repository(name: \\\"Python\\\", owner: \\\"TheAlgorithms\\\") {createdAt name description  languages (first:100){totalCount  nodes {name} pageInfo{endCursor hasNextPage}} stargazers (first:100){totalCount  nodes {name email} pageInfo{endCursor hasNextPage}}}}", query2.queryVal);
+    val console2: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console2) {
 
-    val query3: QueryCommand = QueryBuilder()
-      .withRepoOwner("practice", "rtonki2", List())
-      .withAuth(github)
-      .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
-      .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
-      .withCommits(List(CommitInfo.AUTHOR))
-      .withIssues(List(IssueInfo.AUTHOR))
-      .withLanguages(List(LanguageInfo.NAME))
-      .build
+      val query2: QueryCommand = QueryBuilder()
+        .withRepoOwner("practice", "rtonki2", List())
+        .withAuth(github)
+        .withLanguages(List(LanguageInfo.NAME))
+        .build
+    }
 
-    assertEquals("query{repository(name: \\\"practice\\\", owner: \\\"rtonki2\\\") {createdAt name description  languages (first:100){totalCount  nodes {name} pageInfo{endCursor hasNextPage}} stargazers (first:100){totalCount  nodes {name email} pageInfo{endCursor hasNextPage}}" +
-      " commits: defaultBranchRef{target{... on Commit{  history (first:100){totalCount  nodes {author{name}} pageInfo{endCursor hasNextPage}}}}} issues (first:100){totalCount  nodes {author{login}} pageInfo{endCursor hasNextPage}}}}", query3.queryVal);
+    assertFalse(console2.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}")) //error message
+
+    //Testing .withLanguage option
+    val console3: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console3) {
+
+      val query3: QueryCommand = QueryBuilder()
+        .withRepoOwner("practice", "rtonki2", List())
+        .withAuth(github)
+        .withLanguage(List(LanguageInfo.NAME))
+        .build
+    }
+    assertFalse(console3.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}")) //error
+
+    //testing .withLanguages option
+    val console4: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console4) {
+
+      val query4: QueryCommand = QueryBuilder()
+        .withRepoOwner("practice", "rtonki2", List())
+        .withAuth(github)
+        .withLanguages(List(LanguageInfo.NAME))
+        .build
+    }
+    assertFalse(console4.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}")) //error
+    //Testing that the results are different
+    assert(console3.toString() != console4.toString())
+
+    //Test all options together
+    val console5: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console5) {
+
+      val query5: QueryCommand = QueryBuilder()
+        .withRepoOwner("practice", "rtonki2", List())
+        .withAuth(github)
+        .withLanguages(List(LanguageInfo.NAME))
+        .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+        .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
+        .withCommits(List(CommitInfo.AUTHOR))
+        .withIssues(List(IssueInfo.AUTHOR))
+        .withLanguage(List(LanguageInfo.NAME))
+        .build
+    }
+
+    assertFalse(console5.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
   }
 }
