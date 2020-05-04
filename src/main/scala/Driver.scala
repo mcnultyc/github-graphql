@@ -31,8 +31,8 @@ object Driver {
       .withIssues(List(IssueInfo.AUTHOR))
       .withLanguages(List(LanguageInfo.NAME))
       .build
+    */
 
-     */
   /*
     val query: QueryCommand = QueryBuilder()
       .withRepo("Phone-List-App")
@@ -45,6 +45,7 @@ object Driver {
       .build
 
    */
+
 
     val allIssues = IssueInfo.values.toList
     val allCommits = CommitInfo.values.toList
@@ -73,5 +74,7 @@ object Driver {
       }
     }
 
+
   }
+
 }
