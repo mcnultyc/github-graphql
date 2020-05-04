@@ -183,7 +183,7 @@ class QueryCommand(repo: String = "",
 
     val client = HttpClientBuilder.create().build()
     // Create graph-ql query
-    val query = createQuery()
+    val query = createQuery(repo, owner)
     queryVal = query
     // Create http entity with graph-ql query
     val entity = new StringEntity(s"""{"query":"$query"}""" , ContentType.APPLICATION_JSON)
@@ -646,7 +646,21 @@ class QueryCommand(repo: String = "",
 
 
 
-  private def createQuery(cursors: Map[String, String] = Map(), paginate: Boolean = false): String ={
+  private def createQuery(repoCursors: Map[String, Map[String, String]]): String = {
+    val innerQuery =
+    repoCursors.map{ case (repo, cursors) => {
+      // Create query for repo with cursor info
+      val query = createQuery(repo, owner, cursors, true).trim
+      // Strip outer query e.g. 'query{ ... }'
+      query.slice(6, query.length-1)
+    }}.mkString(" ")
+
+    s"query{$innerQuery}"
+  }
+
+  private def createQuery(repo: String, owner: String,
+                          cursors: Map[String, String] = Map(),
+                          paginate: Boolean = false): String ={
 
     def fields(info: List[Any]): String =
       s"{${info.map(x => x.toString).mkString(" ").trim}}"
