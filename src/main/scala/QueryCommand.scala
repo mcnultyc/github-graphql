@@ -11,6 +11,7 @@ import scala.io.Source.fromInputStream
 import com.typesafe.config.{Config, ConfigFactory}
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.collection.mutable
 
 // Exception for github graph-ql connections
 case class GitHubConnectionException(status: String, message:String) extends Exception{}
@@ -236,7 +237,9 @@ class QueryCommand(repo: String = "",
 
 
         println(json)
-        val cursors = parseResponse(json)
+        val cursors: mutable.Map[String, Map[String, String]] = parseResponse(json)
+        val newQuery = createQuery(cursors)
+        println(newQuery)
         println(cursors)
         loop.break()
         // TODO - finish pagination
@@ -646,12 +649,12 @@ class QueryCommand(repo: String = "",
 
 
 
-  private def createQuery(repoCursors: Map[String, Map[String, String]]): String = {
+  private def createQuery(repoCursors: mutable.Map[String, Map[String, String]]): String = {
     val innerQuery =
     repoCursors.map{ case (repo, cursors) => {
       // Create query for repo with cursor info
       val query = createQuery(repo, owner, cursors, true).trim
-      // Strip outer query e.g. 'query{ ... }'
+      // Strip outer query i.e. 'query{ ... }'
       query.slice(6, query.length-1)
     }}.mkString(" ")
 
