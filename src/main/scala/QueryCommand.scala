@@ -199,6 +199,9 @@ class QueryCommand(repo: String = "",
     // Set http headers for request
     headers.foreach(x => request.addHeader(x._1, x._2))
 
+    // Mapping of unique ids to repository names
+    val ids = mutable.Map[Int, String]()
+
     val loop = new Breaks
     loop.breakable{
       while(true){
@@ -235,10 +238,17 @@ class QueryCommand(repo: String = "",
           }
         }
 
-
         println(json)
         val cursors: mutable.Map[String, Map[String, String]] = parseResponse(json)
-        val newQuery = createQuery(cursors)
+
+        // Create ids for all repositories returned and add to id map
+        cursors.filter(x => x._1 != "repositories").foreach(x => ids += (x._1.hashCode -> x._1))
+
+
+        // TODO - this is the format for the repositories
+        val repoCursor: Map[String,String] = Map("repositories" -> "Y3Vyc29yOnYyOpHOB_ClSQ==")
+        cursors += ("repositories" -> repoCursor)
+        val newQuery = createQuery(cursors, ids)
         println(newQuery)
         println(cursors)
         loop.break()
@@ -256,6 +266,17 @@ class QueryCommand(repo: String = "",
   }
 
   private def parseResponse(response: String): scala.collection.mutable.Map[String, Map[String, String]] ={
+    /*
+      TODO - this is the format for the pagination stuff
+      "data": {
+        "viewer": {
+          "repositories": {...}
+          "repositor
+        }
+      }
+
+     */
+
 
     implicit val formats = DefaultFormats
 
@@ -645,20 +666,42 @@ class QueryCommand(repo: String = "",
 
 
 
-  private def createQuery(repoCursors: mutable.Map[String, Map[String, String]]): String = {
+  private def createQuery(repoCursors: mutable.Map[String, Map[String, String]], ids: mutable.Map[Int, String]): String = {
+    // Create query for individual repositories
     val innerQuery =
-    repoCursors.map{ case (repo, cursors) => {
+    repoCursors.filter(x => x._1 != "repositories").map{ case (repo, cursors) => {
       // Create query for repo with cursor info
-      val query = createQuery(repo, owner, cursors, true).trim
-      // Strip outer query i.e. 'query{ ... }'
-      query.slice(6, query.length-1)
+      val query = createQuery(repo, owner, cursors, ids, true).trim
+      if(owner == ""){
+        // Strip outer query i.e. 'query{viewer{name ... }}'
+        query.slice(17, query.length-2)
+      }
+      else{
+        // Strip outer query i.e. 'query{ ... }'
+        query.slice(6, query.length-1)
+      }
     }}.mkString(" ")
 
-    s"query{$innerQuery}"
+    // Check if 'repositories' requires pagination
+    if(repoCursors.get("repositories") != None) {
+      // Get 'repositories' query i.e. 'query{viewer{name repositories(...){...}}}'
+      val reposQuery = createQuery(repo, owner, repoCursors.get("repositories").get, ids, true)
+      // Combine 'repositories' query with 'repository' queries i.e. `query{viewer{repositories(...){...} repository(...){...} ... }}'
+      val completeQuery = s"query{viewer{${reposQuery.slice(17, reposQuery.length-2)} $innerQuery}}"
+      completeQuery
+    }
+    else if(owner == ""){
+      s"query{viewer{$innerQuery}}"
+    }
+    else{
+      s"query{$innerQuery}"
+    }
   }
+
 
   private def createQuery(repo: String, owner: String,
                           cursors: Map[String, String] = Map(),
+                          ids: mutable.Map[Int, String] = mutable.Map[Int, String](),
                           paginate: Boolean = false): String ={
 
     def fields(info: List[Any]): String =
@@ -668,7 +711,7 @@ class QueryCommand(repo: String = "",
       if(fields.trim == "{}") "" else s" nodes $fields pageInfo{endCursor hasNextPage}"
 
     def args(after: String = "", first:Int = 100): String =
-      if(after.trim == "") s"(first:$first)" else s"(first:$first, after: $after)"
+      if(after.trim == "") s"(first:$first)" else s"""(first:$first, after: \\"$after\\")"""
 
     logger.info(s"creating graph-ql query: # cursors: ${cursors.size}, pagination = $paginate")
 
@@ -684,20 +727,22 @@ class QueryCommand(repo: String = "",
     var complexFields = ""
 
     // Check if user requested primary language info
-    if(languageInfo != null && languagesInfo != null && languagesInfo.length != 0){
+    if(languageInfo != null && languageInfo.length != 0){
       // Add json for primary language
       complexFields += s" primaryLanguage ${fields(languageInfo)}"
     }
     if(languagesInfo != null){
-      // Check if query is for pagination
-      if(!paginate || (paginate && cursors.get("languages") != None)){
+      // Check if query is for pagination, ignore fields without cursors
+      if(!paginate || (paginate && cursors.get("languages") != None)
+          || (paginate && repo == "")){ // Check for creating `repositories` query
         // Add json for languages
         complexFields += s" languages ${args(cursors.getOrElse("languages",""), first)}" +
           s"{totalCount ${nodes(fields(languagesInfo))}}"
       }
     }
     if(starGazersInfo != null){
-      if(!paginate || (paginate && cursors.get("stargazers") != None)){
+      if(!paginate || (paginate && cursors.get("stargazers") != None)
+          || (paginate && repo == "")){
         // Add json for stargazers
         complexFields += s" stargazers ${args(cursors.getOrElse("stargazers",""), first)}" +
           s"{totalCount ${nodes(fields(starGazersInfo))}}"
@@ -705,22 +750,25 @@ class QueryCommand(repo: String = "",
     }
     // Collaborators isn't available for other users repositories
     if(collaboratorsInfo != null && owner == ""){
-      if(!paginate || (paginate && cursors.get("collaborators") != None)){
+      if(!paginate || (paginate && cursors.get("collaborators") != None)
+          || (paginate && repo == "")){
         // Add json for collaborators
         complexFields += s" collaborators${args(cursors.getOrElse("collaborators",""), first)}" +
           s"{totalCount ${nodes(fields(collaboratorsInfo))}}"
       }
     }
     if(commitsInfo != null){
-      if(!paginate || (paginate && cursors.get("commits") != None)){
+      if(!paginate || (paginate && cursors.get("commits") != None)
+          || (paginate && repo == "")){
         // Add json for commits
-        val history = s" history ${args(cursors.getOrElse("history",""), first)}" +
+        val history = s" history ${args(cursors.getOrElse("commits",""), first)}" +
           s"{totalCount ${nodes(fields(commitsInfo))}}"
         complexFields += s" commits: defaultBranchRef{target{... on Commit{ $history}}}"
       }
     }
     if(issuesInfo != null){
-      if(!paginate || (paginate && cursors.get("issues") != None)){
+      if(!paginate || (paginate && cursors.get("issues") != None)
+        || (paginate && repo == "")){
         // Add json for issues
         complexFields += s" issues ${args(cursors.getOrElse("issues",""), first)}" +
           s"{totalCount ${nodes(fields(issuesInfo))}}"
@@ -743,11 +791,19 @@ class QueryCommand(repo: String = "",
     }
     // Query repository for user
     else if(repo != ""){
-      s"""query{viewer {name repository(name: \\"$repo\\") $allFields}}"""
+      if(paginate) {
+        // Get alias/id for repository
+        val alias = s"repo${repo.hashCode}" // 'repo1', 'repo2', 'repo3', ...
+        // Add alias to 'repository' field to distinguish queries i.e. query{viewer{name repo1:repository(...){...}}};
+        s"""query{viewer{name $alias:repository(name: \\"$repo\\") $allFields}}"""
+      }
+      else{
+        s"""query{viewer{name repository(name: \\"$repo\\") $allFields}}"""
+      }
     }
     // Query all repositories for user
     else{
-      s"query{viewer {name repositories ${args(cursors.getOrElse("repositories",""), first)}" +
+      s"query{viewer{name repositories ${args(cursors.getOrElse("repositories",""), first)}" +
         s"{totalCount ${nodes(allFields)}}}}"
     }
   }
