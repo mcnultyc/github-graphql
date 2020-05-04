@@ -251,7 +251,7 @@ class QueryCommand(repo: String = "",
         }
 
         println(json)
-        val cursors: mutable.Map[String, Map[String, String]] = parseResponse(json)
+        val cursors: mutable.Map[String, Map[String, String]] = parseResponse(json)._1
 
         // Create ids for all repositories returned and add to id map
         cursors.filter(x => x._1 != "repositories").foreach(x => ids += (x._1.hashCode -> x._1))
@@ -277,7 +277,7 @@ class QueryCommand(repo: String = "",
     }
   }
 
-  private def parseResponse(response: String): scala.collection.mutable.Map[String, Map[String, String]] ={
+  private def parseResponse(response: String): (scala.collection.mutable.Map[String, Map[String, String]], List[Map[String, Map[String, Any]]]) ={
     /*
       TODO - this is the format for the pagination stuff
       "data": {
@@ -294,12 +294,15 @@ class QueryCommand(repo: String = "",
 
     var endCursorMap = scala.collection.mutable.Map[String, Map[String, String]]()
 
+    var repoInfoList = List[Map[String, Map[String, Any]]]()
+
     val view = parse(response).extract[Map[String, Any]]
 
     if(view.get("data").isEmpty) {
-      return endCursorMap
+      return (endCursorMap, repoInfoList)
     }
-      val data = view.get("data").get.asInstanceOf[Map[String, Any]]
+
+    val data = view.get("data").get.asInstanceOf[Map[String, Any]]
 
     // Query repository for another user
     if(repo != "" && owner != ""){
@@ -314,6 +317,9 @@ class QueryCommand(repo: String = "",
       val repoDesc = repo.get("description").get
 
       println("Repo Info -> " + "Name: " + repoName + ", Created: " + createdInfo + ", Desc: " + repoDesc)
+
+      repoInfoList = Map(repoName.toString -> Map("createdAt" -> createdInfo.toString)) :: repoInfoList
+      repoInfoList = Map(repoName.toString -> Map("description" -> createdInfo.toString)) :: repoInfoList
 
       //Getting language info
       if(languagesInfo != null) {
@@ -337,6 +343,9 @@ class QueryCommand(repo: String = "",
 
         println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
 
+        repoInfoList = Map(repoName.toString -> Map("languagesCount" -> numLanguages.toString)) :: repoInfoList
+        repoInfoList = Map(repoName.toString -> Map("languages" -> languageTypes)) :: repoInfoList
+
         //print(endCursorMap)
       }
 
@@ -357,6 +366,9 @@ class QueryCommand(repo: String = "",
           }
 
           println("Stargazers Info -> " + "Count: " + stargazersCount + ", Nodes: " + stargazers)
+
+          repoInfoList = Map(repoName.toString -> Map("stargazersCount" -> stargazersCount.toString)) :: repoInfoList
+          repoInfoList = Map(repoName.toString -> Map("stargazers" -> stargazers)) :: repoInfoList
 
         }
       }
@@ -392,8 +404,11 @@ class QueryCommand(repo: String = "",
         if (commits_pageInfo.get("hasNextPage").get == true) {
            endCursorMap += (repoName.toString -> Map("commits" -> commits_pageInfo.get("endCursor").get.toString))
         }
-
           println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
+
+          repoInfoList = Map(repoName.toString -> Map("commitsCount" -> commitsCount.toString)) :: repoInfoList
+          repoInfoList = Map(repoName.toString -> Map("authors" -> authorList)) :: repoInfoList
+
         }
         else {
           println("Commits Info -> " + "Count: " + 0)
@@ -416,12 +431,14 @@ class QueryCommand(repo: String = "",
 
         println("Issues Info -> " + "Count: " + issuesCount + ", Nodes: " + issuesNodes)
 
+        repoInfoList = Map(repoName.toString -> Map("issuesCount" -> issuesCount.toString)) :: repoInfoList
+        repoInfoList = Map(repoName.toString -> Map("issues" -> issuesNodes)) :: repoInfoList
+
       }
 
-      return endCursorMap
+      //TODO: call the functions that you will need the repo info for passing the repoInfoMap as a argument
 
-      //Getting errors info
-     // if(repo.get("errors").get != null){
+      (endCursorMap, repoInfoList)
 
       //}
 
@@ -445,6 +462,9 @@ class QueryCommand(repo: String = "",
 
       println("Repo Info -> " + "Name: " + repoName + ", Created: " + createdInfo + ", Desc: " + repoDesc)
 
+      repoInfoList = Map(repoName.toString -> Map("createdAt" -> createdInfo.toString)) :: repoInfoList
+      repoInfoList = Map(repoName.toString -> Map("description" -> createdInfo.toString)) :: repoInfoList
+
       //Getting language info
       if(languagesInfo != null || languageInfo != null) {
         val languageInfo = repo.get("languages").get.asInstanceOf[Map[String, Any]]
@@ -467,6 +487,9 @@ class QueryCommand(repo: String = "",
 
         println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
 
+        repoInfoList = Map(repoName.toString -> Map("languagesCount" -> numLanguages.toString)) :: repoInfoList
+        repoInfoList = Map(repoName.toString -> Map("languages" -> languageTypes)) :: repoInfoList
+
         //print(endCursorMap)
       }
 
@@ -486,11 +509,30 @@ class QueryCommand(repo: String = "",
 
         println("Stargazers Info -> " + "Count: " + stargazersCount + ", Nodes: " + stargazers)
 
+        repoInfoList = Map(repoName.toString -> Map("stargazersCount" -> stargazersCount.toString)) :: repoInfoList
+        repoInfoList = Map(repoName.toString -> Map("stargazers" -> stargazers)) :: repoInfoList
+
       }
 
       //Getting collaborators info
       if(collaboratorsInfo != null) {
         val collaboratorsInfo = repo.get("collaborators").get.asInstanceOf[Map[String, Any]]
+
+        val collaboratorsCount = collaboratorsInfo.get("totalCount").get
+
+        val collaborators = collaboratorsInfo.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
+
+        val collaborators_pageInfo = collaboratorsInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
+
+        if (collaborators_pageInfo.get("hasNextPage").get == true) {
+          endCursorMap += (repoName.toString -> Map("collaborators" -> collaborators_pageInfo.get("endCursor").get.toString))
+        }
+
+        println("Collaborators Info -> " + "Count: " + collaboratorsCount + ", Nodes: " + collaborators)
+
+        repoInfoList = Map(repoName.toString -> Map("collaboratorsCount" -> collaboratorsCount.toString)) :: repoInfoList
+        repoInfoList = Map(repoName.toString -> Map("stargazers" -> collaborators)) :: repoInfoList
+
       }
 
       //Getting commits info
@@ -518,6 +560,9 @@ class QueryCommand(repo: String = "",
 
         println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
 
+        repoInfoList = Map(repoName.toString -> Map("commitsCount" -> commitsCount.toString)) :: repoInfoList
+        repoInfoList = Map(repoName.toString -> Map("authors" -> authorList)) :: repoInfoList
+
       }
 
       //Getting issues info
@@ -536,14 +581,15 @@ class QueryCommand(repo: String = "",
 
         println("Issues Info -> " + "Count: " + issuesCount + ", Nodes: " + issuesNodes)
 
+        repoInfoList = Map(repoName.toString -> Map("issuesCount" -> issuesCount.toString)) :: repoInfoList
+        repoInfoList = Map(repoName.toString -> Map("issues" -> issuesNodes)) :: repoInfoList
+
       }
 
-      return endCursorMap
+      //TODO: call the functions that you will need the repo info for passing the repoInfoMap as a argument
+      //println(repoInfoList)
 
-      //Getting errors info
-      // if(repo.get("errors").get != null){
-
-      //}
+      (endCursorMap, repoInfoList)
 
     }//End of single user repository
     // Query all repositories for user
@@ -572,6 +618,9 @@ class QueryCommand(repo: String = "",
 
        println("Repo Info -> " + "Name: " + repoName + ", Created: " + createdInfo + ", Desc: " + repoDesc)
 
+       repoInfoList = Map(repoName.toString -> Map("createdAt" -> createdInfo.toString)) :: repoInfoList
+       repoInfoList = Map(repoName.toString -> Map("description" -> createdInfo.toString)) :: repoInfoList
+
        //Getting language info
        if(languagesInfo != null || languageInfo != null) {
          val languageInfo = element.get("languages").get.asInstanceOf[Map[String, Any]]
@@ -594,6 +643,9 @@ class QueryCommand(repo: String = "",
 
          println("Language Info -> " + "# of Languages: " + numLanguages + ", Type of Languages: " + languageTypes)
 
+         repoInfoList = Map(repoName.toString -> Map("languagesCount" -> numLanguages.toString)) :: repoInfoList
+         repoInfoList = Map(repoName.toString -> Map("languages" -> languageTypes)) :: repoInfoList
+
          //print(endCursorMap)
        }
 
@@ -613,12 +665,30 @@ class QueryCommand(repo: String = "",
 
          println("Stargazers Info -> " + "Count: " + stargazersCount + ", Nodes: " + stargazers)
 
+         repoInfoList = Map(repoName.toString -> Map("stargazersCount" -> stargazersCount.toString)) :: repoInfoList
+         repoInfoList = Map(repoName.toString -> Map("stargazers" -> stargazers)) :: repoInfoList
+
        }
 
        //Getting collaborators info
        if(collaboratorsInfo != null) {
          val collaboratorsInfo = element.get("collaborators").get.asInstanceOf[Map[String, Any]]
-         println("Collaborators Info -> " + collaboratorsInfo)
+
+         val collaboratorsCount = collaboratorsInfo.get("totalCount").get
+
+         val collaborators = collaboratorsInfo.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
+
+         val collaborators_pageInfo = collaboratorsInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
+
+         if (collaborators_pageInfo.get("hasNextPage").get == true) {
+           endCursorMap += (repoName.toString -> Map("collaborators" -> collaborators_pageInfo.get("endCursor").get.toString))
+         }
+
+         println("Collaborators Info -> " + "Count: " + collaboratorsCount + ", Nodes: " + collaborators)
+
+         repoInfoList = Map(repoName.toString -> Map("collaboratorsCount" -> collaboratorsCount.toString)) :: repoInfoList
+         repoInfoList = Map(repoName.toString -> Map("stargazers" -> collaborators)) :: repoInfoList
+
        }
 
        //Getting commits info
@@ -646,6 +716,9 @@ class QueryCommand(repo: String = "",
 
          println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
 
+         repoInfoList = Map(repoName.toString -> Map("commitsCount" -> commitsCount.toString)) :: repoInfoList
+         repoInfoList = Map(repoName.toString -> Map("authors" -> authorList)) :: repoInfoList
+
        }
 
        //Getting issues info
@@ -664,17 +737,24 @@ class QueryCommand(repo: String = "",
 
          println("Issues Info -> " + "Count: " + issuesCount + ", Nodes: " + issuesNodes)
 
+         repoInfoList = Map(repoName.toString -> Map("issuesCount" -> issuesCount.toString)) :: repoInfoList
+         repoInfoList = Map(repoName.toString -> Map("issues" -> issuesNodes)) :: repoInfoList
+
        }
 
        println("-----------------------------------------------------------------------------------------------------------------------------------")
 
      }//End of every repo for loop
 
-      return endCursorMap
+      //TODO: call the functions that you will need the repo info for passing the repoInfoMap as a argument
+
+      (endCursorMap, repoInfoList)
 
     }//End of all repositories
 
   }//End of parseResponse()
+
+
 
   def filter[A](key: CommitInfo, func:(A) => Boolean):QueryCommand ={
     this
@@ -683,8 +763,6 @@ class QueryCommand(repo: String = "",
   def filter[A](key: IssueInfo, func:(A) => Boolean):QueryCommand ={
     this
   }
-
-
 
   private def createQuery(repoCursors: mutable.Map[String, Map[String, String]], ids: mutable.Map[Int, String]): String = {
     // Create query for individual repositories

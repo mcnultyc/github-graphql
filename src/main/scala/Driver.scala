@@ -23,7 +23,7 @@ object Driver {
       .withHeaders(List((ACCEPT, APP_JSON)))
       .build
 
-    /*
+/*
     val query: QueryCommand = QueryBuilder()
       .withRepoOwner("linux", "torvalds")
       .withAuth(github)
@@ -33,9 +33,9 @@ object Driver {
       .withIssues(List(IssueInfo.AUTHOR))
       .withLanguages(List(LanguageInfo.NAME))
       .build
-    */
 
-  /*
+ */
+
     val query: QueryCommand = QueryBuilder()
       .withRepo("Phone-List-App")
       .withAuth(github)
@@ -46,9 +46,9 @@ object Driver {
       .withLanguages(List(LanguageInfo.NAME))
       .build
 
-   */
 
 
+/*
     val allIssues = IssueInfo.values.toList
     val allCommits = CommitInfo.values.toList
     val allUsers = UserInfo.values.toList
@@ -86,6 +86,8 @@ object Driver {
       }
     }
 
+
+ */
 
   }
 
