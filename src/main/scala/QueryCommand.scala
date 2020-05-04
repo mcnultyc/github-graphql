@@ -670,7 +670,7 @@ class QueryCommand(repo: String = "",
     var complexFields = ""
 
     // Check if user requested primary language info
-    if(languageInfo != null && languagesInfo.length != 0){
+    if(languageInfo != null && languagesInfo != null && languagesInfo.length != 0){
       // Add json for primary language
       complexFields += s" primaryLanguage ${fields(languageInfo)}"
     }
