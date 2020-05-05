@@ -20,24 +20,27 @@ object Driver {
   val logger = LoggerFactory.getLogger(Driver.getClass)
 
   def test[A](d: Donut[A], v: A): Unit ={
-    if(d.pred(v)){
+    val c = 3
+    if(d.pred(c)){
       println("IT WORKED WTF")
     }
   }
 
   def main(args: Array[String]): Unit = {
 
-    val choc = ChocolateDonut((x:Int)=> x == 2)
-    val choc2 = ChocolateDonut((x:String)=> x == "hello")
-    test(choc, 2)
-    test(choc2, "hello")
+  //  val choc = ChocolateDonut((x:Int)=> x == 2)
+  //  val choc2 = ChocolateDonut((x:String)=> x == "hello")
+  //  test(choc, 2)
+  //  test(choc2, "hello")
 
 
-    return
+
     val c = Commit(CommitInfo.AUTHOR, (x: Int) => x == 3)
 
 
+    return
 
+/*
 
     val m: Any = List[Map[String, Any]]()
     val i: Any = 3
@@ -59,7 +62,7 @@ object Driver {
       }
     })
 
-
+*/
 
     val TOKEN = conf.getString("AUTHKEY")
     val ACCEPT = conf.getString("ACCEPT")
