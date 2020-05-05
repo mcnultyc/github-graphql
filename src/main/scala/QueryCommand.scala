@@ -259,76 +259,44 @@ class QueryCommand(repo: String = "",
     // Set http headers for request
     headers.foreach(x => request.addHeader(x._1, x._2))
 
-    // Mapping of unique ids to repository names
-    val ids = mutable.Map[Int, String]()
 
-    val loop = new Breaks
-    loop.breakable{
-      while(true){
-        logger.info(s"""creating http post with entity: {"query":"$query"}""")
-        // Set http entity for request
-        request.setEntity(entity)
+    logger.info(s"""creating http post with entity: {"query":"$query"}""")
+    // Set http entity for request
+    request.setEntity(entity)
 
-        logger.info("executing http post request")
-        // Execute request
-        val response = client.execute(request)
-        // Log http status line from response
-        logger.info(s"http status: ${response.getStatusLine}")
+    logger.info("executing http post request")
+    // Execute request
+    val response = client.execute(request)
+    // Log http status line from response
+    logger.info(s"http status: ${response.getStatusLine}")
 
-        // Get json from response content
-        val json =
-          response.getEntity match{
-            case null => ""
-            case x => {
-              fromInputStream(x.getContent).getLines.mkString
-            }
-          }
-
-        implicit val formats = DefaultFormats
-        val dataOpt = parse(json).extractOpt[Data]
-        if(!dataOpt.isEmpty){
-          val data = dataOpt.get
-          val statusCode = response.getStatusLine.getStatusCode
-          // Check for http OK status and errors in graph-ql errors
-          if(data.errors.size > 0 || statusCode != 200){
-            val status = response.getStatusLine.toString
-            val messages = data.errors.map(x => x.message).mkString("\n")
-            // Throw exception for http status and graph-ql errors
-            throw new GitHubConnectionException(status, messages)
-          }
+    // Get json from response content
+    val json =
+      response.getEntity match{
+        case null => ""
+        case x => {
+          fromInputStream(x.getContent).getLines.mkString
         }
+      }
 
-        println(json)
-        val (cursors, repoInfo) = parseResponse(json)
-
-        data = restructure(repoInfo)
-        println(data)
-
-
-        loop.break()
-
-        // Create ids for all repositories returned and add to id map
-        cursors.filter(x => x._1 != "repositories").foreach(x => ids += (x._1.hashCode -> x._1))
-
-
-        // TODO - this is the format for the repositories
-        val repoCursor: Map[String,String] = Map("repositories" -> "Y3Vyc29yOnYyOpHOB_ClSQ==")
-        cursors += ("repositories" -> repoCursor)
-        val newQuery = createQuery(cursors, ids)
-        println(newQuery)
-        println(cursors)
-        loop.break()
-        // TODO - finish pagination
-        /*
-        // Parse the graph-ql json
-        parseResponse(json)
-        val cursors: Map[String, String] = Map()
-        if(cursors.size == 0){
-          loop.break
-        }
-         */
+    implicit val formats = DefaultFormats
+    val dataOpt = parse(json).extractOpt[Data]
+    if(!dataOpt.isEmpty){
+      val data = dataOpt.get
+      val statusCode = response.getStatusLine.getStatusCode
+      // Check for http OK status and errors in graph-ql errors
+      if(data.errors.size > 0 || statusCode != 200){
+        val status = response.getStatusLine.toString
+        val messages = data.errors.map(x => x.message).mkString("\n")
+        // Throw exception for http status and graph-ql errors
+        throw new GitHubConnectionException(status, messages)
       }
     }
+
+    // Get data parsed from json
+    val (_, repoInfo) = parseResponse(json)
+    // Restructure data for easier use
+    data = restructure(repoInfo)
   }
 
   private def parseResponse(response: String): (scala.collection.mutable.Map[String, Map[String, String]], List[Map[String, Map[String, Any]]]) ={
