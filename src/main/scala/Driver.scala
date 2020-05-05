@@ -4,14 +4,61 @@ import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
 import com.typesafe.config.ConfigFactory
 import org.slf4j.{Logger, LoggerFactory}
 
+// Fields for repository info, used for filtering
+sealed trait Donut[A]{
+  def name: String
+  def pred: (A) => Boolean
+}
+
+// Case class with predicate for 'commits'
+case class ChocolateDonut[A](pred:(A) => Boolean, name:String="choc")extends Donut[A]
+
 object Driver {
 
   val c = ConfigFactory.load()
   val conf = c.getConfig("GQL")
   val logger = LoggerFactory.getLogger(Driver.getClass)
 
+  def test[A](d: Donut[A], v: A): Unit ={
+    if(d.pred(v)){
+      println("IT WORKED WTF")
+    }
+  }
 
   def main(args: Array[String]): Unit = {
+
+    val choc = ChocolateDonut((x:Int)=> x == 2)
+    val choc2 = ChocolateDonut((x:String)=> x == "hello")
+    test(choc, 2)
+    test(choc2, "hello")
+
+
+    return
+    val c = Commit(CommitInfo.AUTHOR, (x: Int) => x == 3)
+
+
+
+
+    val m: Any = List[Map[String, Any]]()
+    val i: Any = 3
+    val s: Any = "hello"
+
+    val lst: List[Any] = List[Any](m, i, s)
+
+    lst.foreach(t =>{
+      t match{
+        case _: List[Map[String, Any]] => { // Check for a nodes field
+          println("list")
+        }
+        case _: Int => {
+          println("int")
+        }
+        case _: String =>{
+          println("string")
+        }
+      }
+    })
+
 
 
     val TOKEN = conf.getString("AUTHKEY")
@@ -37,7 +84,7 @@ object Driver {
  */
 
     val query: QueryCommand = QueryBuilder()
-      .withRepo("Phone-List-App")
+      .withRepos()
       .withAuth(github)
       .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
       .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
@@ -47,6 +94,7 @@ object Driver {
       .build
 
 
+    query.filter(c)
 
 /*
     val allIssues = IssueInfo.values.toList

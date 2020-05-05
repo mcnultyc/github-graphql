@@ -199,7 +199,7 @@ class QueryCommand(repo: String = "",
   // Query logger
   val logger = LoggerFactory.getLogger(this.getClass)
   // Data parsed from json response
-  var data: List[Map[String, Map[String, Any]]] = null
+  var data: List[(String, Map[String, Any])] = null
 
   var queryVal = "" //for testing purposes
   // Execute the graph-ql query
@@ -270,9 +270,8 @@ class QueryCommand(repo: String = "",
         println(json)
         val (cursors, repoInfo) = parseResponse(json)
 
-        data = repoInfo
+        data = restructure(repoInfo)
 
-        println(repoInfo)
         loop.break()
 
         // Create ids for all repositories returned and add to id map
@@ -767,21 +766,69 @@ class QueryCommand(repo: String = "",
   }//End of parseResponse()
 
 
+  def restructure(data:List[Map[String, Map[String, Any]]]): List[(String, Map[String, Any])] ={
+    // Get all unique repo names from data
+    val repos = data.flatMap(x => x.keys.toList).toSet
+    val reposFields =
+      repos.map(repo => {
+        // Get all the maps for specific repo
+        val maps = data.filter(x => x.keys.toList(0) == repo)
+        // Get all the field maps into one list
+        val fieldMaps = maps.flatMap(x => x.values.toList)
+        // Merge all of the field maps into a single field map
+        val fieldMap: Map[String, Any] = fieldMaps.reduce(_ ++ _)
+        (repo, fieldMap)
+      })
+    reposFields.toList
+  }
 
-
-  def filter(field: Fields): Unit ={
-    // Unpack key, predicate, and name from case classes
-    val (key, pred, name) = field match {
-      case Commit(key, pred) =>        (key, pred, "commits")
-      case Issues(key, pred) =>        (key, pred, "issues")
-      case Language(key, pred) =>      (key, pred, "primaryLanguage")
-      case Languages(key, pred) =>     (key, pred, "languages")
-      case StarGazers(key, pred) =>    (key, pred, "stargazers")
-      case Collaborators(key, pred) => (key, pred, "collaborators")
-    }
+  def search[A](key: String, field: String, pred: (A) => Boolean): Unit ={
 
   }
 
+  def filter[A](f: Commit[A]): Unit ={
+
+  }
+
+
+  /*
+  def filter(field: Fields): Unit ={
+
+    // Unpack key, predicate, and name from case classes
+    val (key, pred, name) = field match {
+      case Commit(key, pred) =>        (key.toString, pred, "commits")
+      case Issues(key, pred) =>        (key.toString, pred, "issues")
+      case Language(key, pred) =>      (key.toString, pred, "primaryLanguage")
+      case Languages(key, pred) =>     (key.toString, pred, "languages")
+      case StarGazers(key, pred) =>    (key.toString, pred, "stargazers")
+      case Collaborators(key, pred) => (key.toString, pred, "collaborators")
+    }
+
+    // nodes : List[Map[String, Any]]
+    val repos = List[(String, Map[String, Any])]()
+
+    if(data!= null){
+      data.foreach{ case (repo, fieldMap) => {
+        if(fieldMap.get(key).isDefined){
+          val value = fieldMap.getOrElse(key, null)
+          value match{
+            case _: List[Map[String, Any]] => { // Check for a nodes field
+
+            }
+            case _: Int => {
+
+            }
+            case _: String =>{
+
+            }
+          }
+        }
+      }}
+    }
+
+
+  }
+  */
 
 
   private def createQuery(repoCursors: mutable.Map[String, Map[String, String]], ids: mutable.Map[Int, String]): String = {
