@@ -184,10 +184,6 @@ case class QueryBuilder[I <: QueryInfo](repo: String = "",
 
   // Optional methods for query
 
-  def withLanguage(info: List[LanguageInfo]): QueryBuilder[I] ={
-    this.copy(languageInfo = info)
-  }
-
   def withLanguages(info: List[LanguageInfo] = List()): QueryBuilder[I] ={
     this.copy(languagesInfo = info)
   }
@@ -238,7 +234,6 @@ class QueryCommand(repo: String = "",
 
 
   private def execute(): Unit ={
-
 
     val BASE_GHQL_URL = "https://api.github.com/graphql"
 
@@ -295,12 +290,16 @@ class QueryCommand(repo: String = "",
 
     // Get data parsed from json
     val (_, repoInfo) = parseResponse(json)
+    println(repoInfo)
     // Restructure data for easier use
     data = restructure(repoInfo)
+    println(data)
   }
 
   private def parseResponse(response: String): (scala.collection.mutable.Map[String, Map[String, String]], List[Map[String, Map[String, Any]]]) ={
 
+
+    logger.info("parsing json response")
 
     implicit val formats = DefaultFormats
 
@@ -341,10 +340,10 @@ class QueryCommand(repo: String = "",
 
         val languages = languageInfo.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
 
-        var languageTypes = List[Any]()
+        var languageTypes = List[String]()
 
         for (element <- languages) {
-          languageTypes = element.get("name").get :: languageTypes
+          languageTypes = element.get("name").get.toString :: languageTypes
         }
 
         val languages_pageInfo = languageInfo.get("pageInfo").get.asInstanceOf[Map[String, Any]]
@@ -543,7 +542,7 @@ class QueryCommand(repo: String = "",
         println("Collaborators Info -> " + "Count: " + collaboratorsCount + ", Nodes: " + collaborators)
 
         repoInfoList = Map(repoName.toString -> Map("collaboratorsCount" -> collaboratorsCount.toString)) :: repoInfoList
-        repoInfoList = Map(repoName.toString -> Map("stargazers" -> collaborators)) :: repoInfoList
+        repoInfoList = Map(repoName.toString -> Map("collaborators" -> collaborators)) :: repoInfoList
 
       }
 
@@ -699,7 +698,7 @@ class QueryCommand(repo: String = "",
          println("Collaborators Info -> " + "Count: " + collaboratorsCount + ", Nodes: " + collaborators)
 
          repoInfoList = Map(repoName.toString -> Map("collaboratorsCount" -> collaboratorsCount.toString)) :: repoInfoList
-         repoInfoList = Map(repoName.toString -> Map("stargazers" -> collaborators)) :: repoInfoList
+         repoInfoList = Map(repoName.toString -> Map("collaborators" -> collaborators)) :: repoInfoList
 
        }
 
@@ -786,6 +785,8 @@ class QueryCommand(repo: String = "",
 
   def filter(field: Fields): List[(String, Map[String, Any])] ={
 
+    logger.info(s"""filtering data with name: "${field.name}", field: "${field.field}" """)
+
     // Name of field, 'commits', 'languages', etc.
     val name = field.name
     // Slight modification to 'totalCount' to disambiguate the fields
@@ -803,21 +804,38 @@ class QueryCommand(repo: String = "",
         }
         else if(fieldMap.get(name).isDefined){
           val value = fieldMap.getOrElse(name, null)
-          value match{
-            case _: List[Map[String, Any]] => { // Check for a nodes field
-              // Get the nodes for the field
-              val nodes = value.asInstanceOf[List[Map[String, Any]]]
-              // Map each node to true if predicate is true
-              nodes.map(x => {
+          // Check if value contains nodes
+          if(value.isInstanceOf[List[Any]]){
+            val nodes = value.asInstanceOf[List[Any]]
+            // Check if nodes contains field mappings
+            if(!nodes.isEmpty && nodes(0).isInstanceOf[Map[String, Any]]){
+              val fieldMap = nodes.asInstanceOf[List[Map[String, Any]]]
+              fieldMap.exists(x => {
+                // Look for sub-field in field mapping
                 if (x.get(subfield).isDefined) {
                   val value = x.getOrElse(subfield, null)
-                  // Test the value with the predicate
+                  // Test value with predicate
                   pred(value.toString)
                 }
-                // Return true if any of the nodes are true
-              }).contains(true)
+                else {
+                  false
+                }
+              })
+            } // Check if nodes contain single values like language types
+            else if(!nodes.isEmpty && nodes(0).isInstanceOf[String]){
+              val fieldVals = nodes.asInstanceOf[List[String]]
+              // Apply predicate to values in nodes
+              fieldVals.exists(pred)
             }
-            case _ => pred(value.toString)
+            else{
+              false
+            }
+          }
+          else if(value.isInstanceOf[String]){
+            pred(value.toString)
+          }
+          else{
+            false
           }
         }
         else
