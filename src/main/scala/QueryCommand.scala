@@ -19,11 +19,7 @@ case class GitHubConnectionException(status: String, message:String) extends Exc
 case class Error(message:String)
 case class Data(data:AnyRef, errors:List[Error])
 
-// Fields for repository info
-object FieldsInfo extends Enumeration{
-  type FieldsInfo = Value
-  val COMMITS = Value("commits")
-}
+
 
 
 // Optional fields for commits
@@ -43,11 +39,6 @@ object LanguageInfo extends Enumeration{
   type LanguageInfo = Value
   val COLOR = Value("color")
   val NAME  = Value("name")
-
-  def comp[A](key: String, value: A, func:(A) => Boolean):Boolean ={
-
-    true
-  }
 }
 
 
@@ -94,7 +85,29 @@ import LanguageInfo.LanguageInfo
 import UserInfo.UserInfo
 import IssueInfo.IssueInfo
 import RepoInfo.RepoInfo
-import FieldsInfo.FieldsInfo
+
+
+// Fields for repository info, used for filtering
+sealed trait Fields
+
+// Case class with predicate for 'commits'
+case class Commit[A](field:CommitInfo, pred:(A) => Boolean)extends Fields
+
+// Case class with predicate for 'issues'
+case class Issues[A](field:IssueInfo, pred:(A) => Boolean)extends Fields
+
+// Case class with predicate for 'collaborators'
+case class Collaborators[A](field:UserInfo, pred:(A) => Boolean)extends Fields
+
+// Case class with predicate for 'stargazers'
+case class StarGazers[A](field:UserInfo, pred:(A) => Boolean)extends Fields
+
+// Case class with predicate for 'languages'
+case class Languages(field:LanguageInfo, pred:(String) => Boolean)extends Fields
+
+// Case class with predicate for 'primaryLanguage'
+case class Language(field:LanguageInfo, pred:(String) => Boolean)extends Fields
+
 
 sealed trait QueryInfo
 object QueryInfo{
@@ -183,7 +196,11 @@ class QueryCommand(repo: String = "",
                    issuesInfo: List[IssueInfo] = null,
                    authorizer: GitHub = null){
 
+  // Query logger
   val logger = LoggerFactory.getLogger(this.getClass)
+  // Data parsed from json response
+  var data: List[Map[String, Map[String, Any]]] = null
+
   var queryVal = "" //for testing purposes
   // Execute the graph-ql query
   execute()
@@ -251,7 +268,12 @@ class QueryCommand(repo: String = "",
         }
 
         println(json)
-        val cursors: mutable.Map[String, Map[String, String]] = parseResponse(json)._1
+        val (cursors, repoInfo) = parseResponse(json)
+
+        data = repoInfo
+
+        println(repoInfo)
+        loop.break()
 
         // Create ids for all repositories returned and add to id map
         cursors.filter(x => x._1 != "repositories").foreach(x => ids += (x._1.hashCode -> x._1))
@@ -278,16 +300,6 @@ class QueryCommand(repo: String = "",
   }
 
   private def parseResponse(response: String): (scala.collection.mutable.Map[String, Map[String, String]], List[Map[String, Map[String, Any]]]) ={
-    /*
-      TODO - this is the format for the pagination stuff
-      "data": {
-        "viewer": {
-          "repositories": {...}
-          "repositor
-        }
-      }
-
-     */
 
 
     implicit val formats = DefaultFormats
@@ -756,13 +768,21 @@ class QueryCommand(repo: String = "",
 
 
 
-  def filter[A](key: CommitInfo, func:(A) => Boolean):QueryCommand ={
-    this
+
+  def filter(field: Fields): Unit ={
+    // Unpack key, predicate, and name from case classes
+    val (key, pred, name) = field match {
+      case Commit(key, pred) =>        (key, pred, "commits")
+      case Issues(key, pred) =>        (key, pred, "issues")
+      case Language(key, pred) =>      (key, pred, "primaryLanguage")
+      case Languages(key, pred) =>     (key, pred, "languages")
+      case StarGazers(key, pred) =>    (key, pred, "stargazers")
+      case Collaborators(key, pred) => (key, pred, "collaborators")
+    }
+
   }
 
-  def filter[A](key: IssueInfo, func:(A) => Boolean):QueryCommand ={
-    this
-  }
+
 
   private def createQuery(repoCursors: mutable.Map[String, Map[String, String]], ids: mutable.Map[Int, String]): String = {
     // Create query for individual repositories
