@@ -87,26 +87,51 @@ import IssueInfo.IssueInfo
 import RepoInfo.RepoInfo
 
 
+
 // Fields for repository info, used for filtering
-sealed trait Fields
+sealed trait Fields{
+  def pred: (String) => Boolean
+  def field: String
+  def name: String
+}
+
+//abstract class Fields(name:String, field:String, pred:(String)=>Boolean){}
 
 // Case class with predicate for 'commits'
-case class Commit[A](field:CommitInfo, pred:(A) => Boolean)extends Fields
+case class Commit(info:CommitInfo, pred:(String) => Boolean, name:String = "commits")
+        extends Fields{
+  override val field = info.toString
+}
 
 // Case class with predicate for 'issues'
-case class Issues[A](field:IssueInfo, pred:(A) => Boolean)extends Fields
+case class Issues(info:IssueInfo, pred:(String) => Boolean, name:String = "issues")
+        extends Fields{
+  override val field = info.toString
+}
 
 // Case class with predicate for 'collaborators'
-case class Collaborators[A](field:UserInfo, pred:(A) => Boolean)extends Fields
+case class Collaborators(info:UserInfo, pred:(String) => Boolean, name:String = "collaborators")
+        extends Fields{
+  override val field = info.toString
+}
 
 // Case class with predicate for 'stargazers'
-case class StarGazers[A](field:UserInfo, pred:(A) => Boolean)extends Fields
+case class StarGazers(info:UserInfo, pred:(String) => Boolean, name:String ="stargazers")
+        extends Fields{
+  override val field = info.toString
+}
 
 // Case class with predicate for 'languages'
-case class Languages(field:LanguageInfo, pred:(String) => Boolean)extends Fields
+case class Languages(info:LanguageInfo, pred:(String) => Boolean, name:String="languages")
+        extends Fields{
+  override val field = info.toString
+}
 
 // Case class with predicate for 'primaryLanguage'
-case class Language(field:LanguageInfo, pred:(String) => Boolean)extends Fields
+case class Language(info:LanguageInfo, pred:(String) => Boolean, name:String="primaryLanguage")
+        extends Fields{
+  override val field = info.toString
+}
 
 
 sealed trait QueryInfo
@@ -782,53 +807,41 @@ class QueryCommand(repo: String = "",
     reposFields.toList
   }
 
-  def search[A](key: String, field: String, pred: (A) => Boolean): Unit ={
 
-  }
-
-  def filter[A](f: Commit[A]): Unit ={
-
-  }
-
-
-  /*
   def filter(field: Fields): Unit ={
-
-    // Unpack key, predicate, and name from case classes
-    val (key, pred, name) = field match {
-      case Commit(key, pred) =>        (key.toString, pred, "commits")
-      case Issues(key, pred) =>        (key.toString, pred, "issues")
-      case Language(key, pred) =>      (key.toString, pred, "primaryLanguage")
-      case Languages(key, pred) =>     (key.toString, pred, "languages")
-      case StarGazers(key, pred) =>    (key.toString, pred, "stargazers")
-      case Collaborators(key, pred) => (key.toString, pred, "collaborators")
-    }
-
-    // nodes : List[Map[String, Any]]
-    val repos = List[(String, Map[String, Any])]()
-
+    // TODO - untested filter
     if(data!= null){
-      data.foreach{ case (repo, fieldMap) => {
-        if(fieldMap.get(key).isDefined){
-          val value = fieldMap.getOrElse(key, null)
-          value match{
-            case _: List[Map[String, Any]] => { // Check for a nodes field
-
-            }
-            case _: Int => {
-
-            }
-            case _: String =>{
-
+      val repos =
+        data.filter{ case(repo, fieldMap) => {
+          if(fieldMap.get(field.name).isDefined){
+            val value = fieldMap.getOrElse(field.name, null)
+            value match{
+              case _: List[Map[String, Any]] => { // Check for a nodes field
+                // Get the nodes for the field
+                val nodes = value.asInstanceOf[List[Map[String, Any]]]
+                // Map each node to true if predicate is true
+                nodes.map(x => {
+                  if(x.get(field.field).isDefined){
+                    val value = x.getOrElse(field.field, null)
+                    // Test the value with the predicate
+                    field.pred(value.toString)
+                  }
+                  // Return true if any of the nodes are true
+                }).exists(x => x == true)
+              }
+              case _ => field.pred(value.toString)
             }
           }
-        }
-      }}
+          else
+            false
+        }}
+
+      println(repos)
     }
 
 
   }
-  */
+
 
 
   private def createQuery(repoCursors: mutable.Map[String, Map[String, String]], ids: mutable.Map[Int, String]): String = {
