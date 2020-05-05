@@ -47,6 +47,7 @@ object Driver {
       .withLanguages(List(LanguageInfo.NAME))
       .build
 
+    println(query.filter(Commit(CommitInfo.TOTAL_COUNT, (x) => x == "40")))
 
 /*
     val allIssues = IssueInfo.values.toList
