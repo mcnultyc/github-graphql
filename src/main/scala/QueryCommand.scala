@@ -31,6 +31,7 @@ object CommitInfo extends Enumeration{
   val CHANGED_FILES = Value("changedFiles")
   val PUSHED_DATE   = Value("pushedDate")
   val ID            = Value("id")
+  val TOTAL_COUNT   = Value("totalCount")
 }
 
 
@@ -39,6 +40,7 @@ object LanguageInfo extends Enumeration{
   type LanguageInfo = Value
   val COLOR = Value("color")
   val NAME  = Value("name")
+  val TOTAL_COUNT   = Value("totalCount")
 }
 
 
@@ -51,6 +53,8 @@ object UserInfo extends Enumeration{
   val ID      = Value("id")
   val LOGIN   = Value("login")
   val NAME    = Value("name")
+  // Only used for filtering and not building queries
+  val TOTAL_COUNT     = Value("totalCount")
 }
 
 
@@ -64,6 +68,7 @@ object IssueInfo extends Enumeration{
   val PUBLISHED_AT    = Value("publishedAt")
   val CLOSED_AT       = Value("closedAt")
   val LAST_EDITED_AT  = Value("lastEditedAt")
+  val TOTAL_COUNT     = Value("totalCount")
 }
 
 
@@ -77,6 +82,7 @@ object RepoInfo extends Enumeration{
   val IS_FORK     = Value("isFork")
   val IS_ARCHIVED = Value("isArchived")
   val NAME        = Value("name")
+  val TOTAL_COUNT = Value("totalCount")
 }
 
 
@@ -296,6 +302,8 @@ class QueryCommand(repo: String = "",
         val (cursors, repoInfo) = parseResponse(json)
 
         data = restructure(repoInfo)
+        println(data)
+
 
         loop.break()
 
@@ -808,38 +816,46 @@ class QueryCommand(repo: String = "",
   }
 
 
-  def filter(field: Fields): Unit ={
-    // TODO - untested filter
-    if(data!= null){
-      val repos =
-        data.filter{ case(repo, fieldMap) => {
-          if(fieldMap.get(field.name).isDefined){
-            val value = fieldMap.getOrElse(field.name, null)
-            value match{
-              case _: List[Map[String, Any]] => { // Check for a nodes field
-                // Get the nodes for the field
-                val nodes = value.asInstanceOf[List[Map[String, Any]]]
-                // Map each node to true if predicate is true
-                nodes.map(x => {
-                  if(x.get(field.field).isDefined){
-                    val value = x.getOrElse(field.field, null)
-                    // Test the value with the predicate
-                    field.pred(value.toString)
-                  }
-                  // Return true if any of the nodes are true
-                }).exists(x => x == true)
-              }
-              case _ => field.pred(value.toString)
+  def filter(field: Fields): List[(String, Map[String, Any])] ={
+
+    // Name of field, 'commits', 'languages', etc.
+    val name = field.name
+    // Slight modification to 'totalCount' to disambiguate the fields
+    val subfield = if(field.field == "totalCount") field.name+"Count" else field.field
+    // Predicate used for filtering repositories
+    val pred = field.pred
+
+    val repos =
+      data.filter{ case(repo, fieldMap) => {
+        // 'totalCount' was pulled up after parsing
+        if(fieldMap.get(subfield).isDefined && field.field == "totalCount"){
+          val value = fieldMap.getOrElse(subfield, "")
+          // Test the value with the predicate
+          pred(value.toString)
+        }
+        else if(fieldMap.get(name).isDefined){
+          val value = fieldMap.getOrElse(name, null)
+          value match{
+            case _: List[Map[String, Any]] => { // Check for a nodes field
+              // Get the nodes for the field
+              val nodes = value.asInstanceOf[List[Map[String, Any]]]
+              // Map each node to true if predicate is true
+              nodes.map(x => {
+                if (x.get(subfield).isDefined) {
+                  val value = x.getOrElse(subfield, null)
+                  // Test the value with the predicate
+                  pred(value.toString)
+                }
+                // Return true if any of the nodes are true
+              }).contains(true)
             }
+            case _ => pred(value.toString)
           }
-          else
-            false
-        }}
-
-      println(repos)
-    }
-
-
+        }
+        else
+          false
+      }}
+    repos
   }
 
 
@@ -893,6 +909,7 @@ class QueryCommand(repo: String = "",
 
     logger.info(s"creating graph-ql query: # cursors: ${cursors.size}, pagination = $paginate")
 
+
     val config: Config = ConfigFactory.load().getConfig("GQL")
 
     // Get the limit of total nodes for fields
@@ -928,7 +945,7 @@ class QueryCommand(repo: String = "",
     }
     // Collaborators isn't available for other users repositories
     if(collaboratorsInfo != null && owner == ""){
-      if(!paginate || (paginate && cursors.get("collaborators") != None)
+      if(!paginate || (paginate && cursors.get("collaborators").isDefined)
           || (paginate && repo == "")){
         // Add json for collaborators
         complexFields += s" collaborators${args(cursors.getOrElse("collaborators",""), first)}" +
@@ -936,7 +953,7 @@ class QueryCommand(repo: String = "",
       }
     }
     if(commitsInfo != null){
-      if(!paginate || (paginate && cursors.get("commits") != None)
+      if(!paginate || (paginate && cursors.get("commits").isDefined)
           || (paginate && repo == "")){
         // Add json for commits
         val history = s" history ${args(cursors.getOrElse("commits",""), first)}" +
@@ -945,7 +962,7 @@ class QueryCommand(repo: String = "",
       }
     }
     if(issuesInfo != null){
-      if(!paginate || (paginate && cursors.get("issues") != None)
+      if(!paginate || (paginate && cursors.get("issues").isDefined)
         || (paginate && repo == "")){
         // Add json for issues
         complexFields += s" issues ${args(cursors.getOrElse("issues",""), first)}" +
