@@ -73,6 +73,9 @@ Our query command are built using the builder pattern
 inside of [QueryBuilder](src/main/scala/QueryCommand.scala). This
 builder class uses **phantom types** to ensure that the required methods
 are called before the build method, and it checks for this at compile time.
+We've provided several enums to encapsulate the various graphql fields.
+For instance these are all the fields that the user can request when
+querying collaborators, and or stargazers.
 
 ```scala
       // Optional fields for users
@@ -87,6 +90,38 @@ are called before the build method, and it checks for this at compile time.
       }
 ```
 
+To the build the query the user must provide a [GitHub](src/main/scala/QueryCommand.scala)
+object. This object will contain the authorization token used to access
+the GitHub API, along with additional headers that the user can provide.
+This object will be used to craft each HTTP request executed by the QueryCommand
+class. It can be built like this:
+
+```scala
+    val github: GitHub = GitHubBuilder()
+      .withAuth(TOKEN)
+      .withHeaders(List((ACCEPT, APP_JSON)))
+      .build
+```
+
+
+The user is also required to specify one of the following
+repository selection methods from the [QueryBuilder](src/main/scala/QueryCommand.scala) class:
+
+```scala
+      def withRepo(name: String, info: List[RepoInfo])
+    
+      def withRepoOwner(name: String, owner: String, info: List[RepoInfo])
+    
+      def withRepos(info: List[RepoInfo])
+```
+The first method selects a specific repository from the user's GitHub account. The 
+second method selects a specific repository from another user's account.
+The last method selects all of the user's repositories. Each method also takes
+a list of optional graphql fields that the user can specify. More info on these
+fields can be found in the **RepoInfo** enum in [QueryCommand.scala](src/main/scala/QueryCommand.scala).
+
+The complete snippet of code used to construct a QueryCommand object is seen
+below, along with all possible methods:
 
 ```scala
 
@@ -101,16 +136,30 @@ are called before the build method, and it checks for this at compile time.
         .build
 
 ```
+The only methods required are the repository selection method and the
+GitHub authorization instance. The remaining methods can be used in
+any combination. Each method also takes a list of the specific fields
+being requested. A working example of all this can be found in the
+[Driver](src/main/scala/Driver.scala) class.
 
 
 ### Parsing
 
 ### Monadic combinators
 
+We've chosen to implement a **filter** method inside of the [QueryCommand](src/main/scala/QueryCommand.scala)
+class. This method allows you to pass a predicate function along with the name
+and field of the data you'll be testing. The predicate function should accept
+ a single argument of the type of data being tested and should return a 
+ boolean. For instance this is how to filter repositories that use Java:
+
 ```scala
       query.filter(Languages(LanguageInfo.NAME, (x:String) => x == "Java"))
 ```
 
+This is how to filter repositories with a specific number of commits:
+
 ```scala
-      query.filter(Commit(CommitInfo.TOTAL_COUNT, (x:Int) => x > 100))
+      query.filter(Commit(CommitInfo.TOTAL_COUNT, (x:Int) => x > 100 && x <= 1000))
 ```
+
