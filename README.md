@@ -34,7 +34,7 @@ configuration file. The highest value for `LIMIT` is 100.
 
 Our query command are built using the builder pattern
 inside of [QueryBuilder](src/main/scala/QueryCommand.scala). This
-builder class uses phantom types to ensure that the required methods
+builder class uses **phantom types** to ensure that the required methods
 are called before the build method, and it checks for this at compile time.
 
 ```scala
@@ -69,3 +69,8 @@ are called before the build method, and it checks for this at compile time.
 ### Parsing
 
 ### Monadic combinators
+
+```scala
+      // Filter repos were the language Java is used
+      query.filter(Languages(LanguageInfo.NAME, (x) => x == "Java"))
+```
