@@ -71,6 +71,9 @@ are called before the build method, and it checks for this at compile time.
 ### Monadic combinators
 
 ```scala
-      // Filter repos were the language Java is used
-      query.filter(Languages(LanguageInfo.NAME, (x) => x == "Java"))
+      query.filter(Languages(LanguageInfo.NAME, (x:String) => x == "Java"))
+```
+
+```scala
+      query.filter(Commit(CommitInfo.TOTAL_COUNT, (x:Int) => x > 100))
 ```
