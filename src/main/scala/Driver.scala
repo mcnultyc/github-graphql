@@ -57,15 +57,6 @@ object Driver {
 
   def main(args: Array[String]): Unit = {
 
-
-    val c = Committ("", (x: String) => x == "carlos")
-    val t = new Test()
-
-    t.filter(c)
-
-    return
-
-
     val TOKEN = conf.getString("AUTHKEY")
     val ACCEPT = conf.getString("ACCEPT")
     val APP_JSON = conf.getString("APPJSON")
@@ -78,7 +69,7 @@ object Driver {
     try {
 
       val query: QueryCommand = QueryBuilder()
-        .withRepoOwner("sudoku-solver", "mcnultyc")
+        .withRepos()
         .withAuth(github)
         .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
         .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
@@ -88,7 +79,7 @@ object Driver {
         .build
 
       // Filter repos were the language Java is used
-      printData(query.filter(Languages(LanguageInfo.NAME, (x) => x == "Java")))
+      printData(query.filter(Languages(LanguageInfo.TOTAL_COUNT, (x:Int) => x < 2)))
     }
     catch{
       // Check for github connection exception and graphql errors
@@ -101,7 +92,6 @@ object Driver {
 
       }
     }
-
   }
 
 }
