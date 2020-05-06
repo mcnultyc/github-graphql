@@ -13,6 +13,8 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable
 
+import scala.util.Try
+
 // Exception for github graph-ql connections
 case class GitHubConnectionException(status: String, message:String) extends Exception{}
 // Case classes for parsing response with errors
@@ -95,8 +97,8 @@ import RepoInfo.RepoInfo
 
 
 // Fields for repository info, used for filtering
-sealed trait Fields{
-  def pred: (String) => Boolean
+sealed trait Fields[T]{
+  def pred: (T) => Boolean
   def field: String
   def name: String
 }
@@ -104,38 +106,38 @@ sealed trait Fields{
 //abstract class Fields(name:String, field:String, pred:(String)=>Boolean){}
 
 // Case class with predicate for 'commits'
-case class Commit(info:CommitInfo, pred:(String) => Boolean, name:String = "commits")
-        extends Fields{
+case class Commit[T](info:CommitInfo, pred:(T) => Boolean, name:String = "commits")
+        extends Fields[T]{
   override val field = info.toString
 }
 
 // Case class with predicate for 'issues'
-case class Issues(info:IssueInfo, pred:(String) => Boolean, name:String = "issues")
-        extends Fields{
+case class Issues[T](info:IssueInfo, pred:(T) => Boolean, name:String = "issues")
+        extends Fields[T]{
   override val field = info.toString
 }
 
 // Case class with predicate for 'collaborators'
-case class Collaborators(info:UserInfo, pred:(String) => Boolean, name:String = "collaborators")
-        extends Fields{
+case class Collaborators[T](info:UserInfo, pred:(T) => Boolean, name:String = "collaborators")
+        extends Fields[T]{
   override val field = info.toString
 }
 
 // Case class with predicate for 'stargazers'
-case class StarGazers(info:UserInfo, pred:(String) => Boolean, name:String ="stargazers")
-        extends Fields{
+case class StarGazers[T](info:UserInfo, pred:(T) => Boolean, name:String ="stargazers")
+        extends Fields[T]{
   override val field = info.toString
 }
 
 // Case class with predicate for 'languages'
-case class Languages(info:LanguageInfo, pred:(String) => Boolean, name:String="languages")
-        extends Fields{
+case class Languages[T](info:LanguageInfo, pred:(T) => Boolean, name:String="languages")
+        extends Fields[T]{
   override val field = info.toString
 }
 
 // Case class with predicate for 'primaryLanguage'
-case class Language(info:LanguageInfo, pred:(String) => Boolean, name:String="primaryLanguage")
-        extends Fields{
+case class Language[T](info:LanguageInfo, pred:(T) => Boolean, name:String="primaryLanguage")
+        extends Fields[T]{
   override val field = info.toString
 }
 
@@ -783,9 +785,101 @@ class QueryCommand(repo: String = "",
   }
 
 
-  def filter(field: Fields): List[(String, Map[String, Any])] ={
 
-    logger.info(s"""filtering data with name: "${field.name}", field: "${field.field}" """)
+
+
+
+  def filter[T](field: Fields[T]): List[(String, Map[String, Any])] ={
+    /* Type casting frenzy, you get a type! and you get a type!
+     * Enter at your own risk! It's a miracle that this works... >:), does it?
+     */
+
+    // Helper function for interpreting data
+    def convert[A](value: Any): Option[A] ={
+      value match {
+        case a: A =>
+          Some(a)
+        case _ =>
+          None
+      }
+    }
+
+    // Helper function for checking if string is an integer
+    def toInt(s: String): Option[Int] = Try(s.toInt).toOption
+
+
+    def test(value: Any, pred: (T) => Boolean): Boolean ={
+      // Check if value is a valid integer
+      if(toInt(value.toString).isDefined){
+        // Convert between value as integer and type T
+        val convertOpt = convert[T](toInt(value.toString).get)
+        if(convertOpt.isDefined){
+          // Test value with predicate
+          if(pred(convertOpt.get)){
+            return true
+          }
+        }
+      }
+      else{
+        // Convert between value and type T
+        val convertOpt = convert[T](value)
+        if(convertOpt.isDefined){
+          // Test value with predicate
+          if(pred(convertOpt.get)){
+            return true
+          }
+        }
+      }
+      false
+    }
+
+
+    def checkNodes(nodes: List[Any], subfield: String, pred: (T) => Boolean): Boolean ={
+      // Attempt to convert node to string
+      val nodeListOpt = convert[String](nodes(0))
+      // Attempt to convert node to map
+      val nodeMapOpt = convert[Map[String, Any]](nodes(0))
+      if(nodeListOpt.isDefined){ // List of string nodes
+        val nodeList = convert[List[String]](nodes).get // Some fields aren't parsed as maps
+        nodeList.foreach(x =>{
+          if(test(x, pred)){
+            return true
+          }
+        })
+      }
+      else if(nodeMapOpt.isDefined){ // List of map nodes
+        val nodeMaps = convert[List[Map[String, Any]]](nodes).get
+        nodeMaps.foreach(fieldMap => {
+          // Check if field map contains sub-field
+          if(fieldMap.get(subfield).isDefined){
+            val value = fieldMap(subfield)
+            if(test(value, pred)){
+              return true
+            }
+          }
+        })
+      }
+      false
+    }
+
+    def checkFields(fieldMap: Map[String, Any], subfield: String, pred: (T) => Boolean): Boolean ={
+      // Check if the field map contains the selected name
+      if(fieldMap.get(subfield).isDefined){
+        val value = fieldMap(subfield)
+        // Attempt to convert value to list for nodes
+        val listOpt = convert[List[Any]](value)
+        // Check if field contains nodes
+        if(listOpt.isDefined){
+          // Test the predicate with nodes
+          return checkNodes(listOpt.get, subfield, pred)
+        }
+        else{
+          return test(value, pred)
+        }
+      }
+      false
+    }
+
 
     // Name of field, 'commits', 'languages', etc.
     val name = field.name
@@ -794,53 +888,24 @@ class QueryCommand(repo: String = "",
     // Predicate used for filtering repositories
     val pred = field.pred
 
-    val repos =
-      data.filter{ case(repo, fieldMap) => {
-        // 'totalCount' was pulled up after parsing
-        if(fieldMap.get(subfield).isDefined && field.field == "totalCount"){
-          val value = fieldMap.getOrElse(subfield, "")
-          // Test the value with the predicate
-          pred(value.toString)
+    val repos = data.filter{ case(repo, fieldMap) =>{
+      // Test for 'totalCount', which was pulled up after parsing
+      if(fieldMap.get(subfield).isDefined){ // special case
+        val value = fieldMap(subfield)
+        test(value, pred)
+      }
+      else{
+        // Check for languages special case
+        if(name == "languages"){
+          // Test the predicate inside of the subfields
+          checkFields(fieldMap, "languages", pred)
         }
-        else if(fieldMap.get(name).isDefined){
-          val value = fieldMap.getOrElse(name, null)
-          // Check if value contains nodes
-          if(value.isInstanceOf[List[Any]]){
-            val nodes = value.asInstanceOf[List[Any]]
-            // Check if nodes contains field mappings
-            if(!nodes.isEmpty && nodes(0).isInstanceOf[Map[String, Any]]){
-              val fieldMap = nodes.asInstanceOf[List[Map[String, Any]]]
-              fieldMap.exists(x => {
-                // Look for sub-field in field mapping
-                if (x.get(subfield).isDefined) {
-                  val value = x.getOrElse(subfield, null)
-                  // Test value with predicate
-                  pred(value.toString)
-                }
-                else {
-                  false
-                }
-              })
-            } // Check if nodes contain single values like language types
-            else if(!nodes.isEmpty && nodes(0).isInstanceOf[String]){
-              val fieldVals = nodes.asInstanceOf[List[String]]
-              // Apply predicate to values in nodes
-              fieldVals.exists(pred)
-            }
-            else{
-              false
-            }
-          }
-          else if(value.isInstanceOf[String]){
-            pred(value.toString)
-          }
-          else{
-            false
-          }
+        else{
+          // Test the predicate inside of the subfields
+          checkFields(fieldMap, subfield, pred)
         }
-        else
-          false
-      }}
+      }
+    }}
     repos
   }
 
