@@ -4,11 +4,39 @@ import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
 import com.typesafe.config.ConfigFactory
 import org.slf4j.{Logger, LoggerFactory}
 
+// Fields for repository info, used for filtering
+sealed trait Fieldss[T]{
+  def pred: (T) => Boolean
+  def field: String
+  def name: String
+}
+
+//abstract class Fields(name:String, field:String, pred:(String)=>Boolean){}
+
+// Case class with predicate for 'commits'
+case class Committ[T](info:String, pred:(T) => Boolean, name:String = "commits")
+  extends Fieldss[T]{
+  override val field = info.toString
+}
+
+class Test{
+
+  def filter[T](f: Fieldss[T]): Unit ={
+    val i: String = "carlos"
+    if(i.isInstanceOf[T]){
+      val convert: T = i.asInstanceOf[T]
+      if(f.pred(convert)){
+        println("STILL WORKS")
+      }
+    }
+  }
+}
 
 object Driver {
 
   val conf = ConfigFactory.load().getConfig("GQL")
   val logger = LoggerFactory.getLogger(Driver.getClass)
+
 
   def printData(repos: List[(String, Map[String, Any])], max: Int = 3): Unit ={
 
@@ -30,6 +58,14 @@ object Driver {
   def main(args: Array[String]): Unit = {
 
 
+    val c = Committ("", (x: String) => x == "carlos")
+    val t = new Test()
+
+    t.filter(c)
+
+    return
+
+
     val TOKEN = conf.getString("AUTHKEY")
     val ACCEPT = conf.getString("ACCEPT")
     val APP_JSON = conf.getString("APPJSON")
@@ -42,7 +78,7 @@ object Driver {
     try {
 
       val query: QueryCommand = QueryBuilder()
-        .withRepos()
+        .withRepoOwner("sudoku-solver", "mcnultyc")
         .withAuth(github)
         .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
         .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
@@ -51,7 +87,7 @@ object Driver {
         .withLanguages(List(LanguageInfo.NAME))
         .build
 
-      // Filter repos were the primary language is Java
+      // Filter repos were the language Java is used
       printData(query.filter(Languages(LanguageInfo.NAME, (x) => x == "Java")))
     }
     catch{
