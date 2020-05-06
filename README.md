@@ -19,6 +19,43 @@ Our program can be run via two methods:
 
 In order to run our tests, you must use SBT and the command: `sbt run test`
 
+Our unit tests have been implemented by capturing a stream of output into a 
+variable which allows us to compare the console output from a query and ensure
+it contains a certain key string that is expected to print if the code is 
+working properly. This general approach is deployed in each of our tests 
+with slight variations.
+
+**Test 1: testCreateQuery()**
+    This tests that our QueryBuilder is successfully building executable 
+    query strings based on the options selected by the user, and that they
+    meet the format we've defined so that they should execute properly.
+
+**Test 2: testReturnNoError()**
+    This tests that the query strings we generated and tested in the previous test
+    execute and successfully return with data. We look for errors and blank
+    return information, as well as check that a blank return is produced when it
+    should be.
+    
+**Test 3: testParsing()**
+    This tests how the information retrieved from our query is parsed, stored, 
+    and displayed for the user. It checks that the console output contains 
+    "Repo Info" because that indicates the data has been retrieved successfully,
+    and then checks the rest of the console output for key string indicating the
+    successful parse of specific data elements.
+
+**Test 4: testFilter()**
+    This tests the ability of our filter function to filter out repositories 
+    from a query based on a specific attribute and predicate on that attribute.
+    For example, we check that linux repo which has around 900k commits shows up
+    in our filtered output when we filter by CommitsInfo.TOTAL_COUNT > 1000, and
+    doesn't show up when we filter CommitsInfo.TOTAL_COUNT > 2000000
+
+**Test 5: testEmptyRepo()**
+    This is a boundary case test that checks various aspects of our program 
+    functionality against a query that returns a completely empty repo. This turned
+    up many bugs that caused nullPointer and other Exceptions.
+    
+
 ## Configuration file
 The [configuration file](src/main/resources/application.conf) provides a key 
 `AUTHKEY` for the user to enter their GitHub authorization token used for 

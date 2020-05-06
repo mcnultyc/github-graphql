@@ -79,7 +79,7 @@ object Driver {
         .build
 
       // Filter repos were the language Java is used
-      printData(query.filter(Languages(LanguageInfo.TOTAL_COUNT, (x:Int) => x < 2)))
+      printData(query.filter(Languages(LanguageInfo.TOTAL_COUNT, (x:Int) => x > 2)))
     }
     catch{
       // Check for github connection exception and graphql errors

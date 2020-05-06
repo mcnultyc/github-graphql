@@ -234,7 +234,6 @@ class QueryCommand(repo: String = "",
   // Execute the graph-ql query
   execute()
 
-
   private def execute(): Unit ={
 
     val BASE_GHQL_URL = "https://api.github.com/graphql"
@@ -707,31 +706,35 @@ class QueryCommand(repo: String = "",
        //Getting commits info
        if(commitsInfo != null && element.get("commits").nonEmpty) {
          val commits = element.get("commits").get.asInstanceOf[Map[String, Any]]
-         val target = commits.get("target").get.asInstanceOf[Map[String, Any]]
-         val history = target.get("history").get.asInstanceOf[Map[String, Any]]
+         if(commits != null) {
+           val target = commits.get("target").get.asInstanceOf[Map[String, Any]]
+           val history = target.get("history").get.asInstanceOf[Map[String, Any]]
 
-         val commitsCount = history.get("totalCount").get
+           val commitsCount = history.get("totalCount").get
 
-         val commitNodes = history.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
+           val commitNodes = history.get("nodes").get.asInstanceOf[List[Map[String, Any]]]
 
-         var authorList = List[Map[String, Any]]()
+           var authorList = List[Map[String, Any]]()
 
-         for (element <- commitNodes) {
-           val author = element.get("author")
-           authorList = author.get.asInstanceOf[Map[String, Any]] :: authorList
+           for (element <- commitNodes) {
+             val author = element.get("author")
+             authorList = author.get.asInstanceOf[Map[String, Any]] :: authorList
+           }
+
+           val commits_pageInfo = history.get("pageInfo").get.asInstanceOf[Map[String, Any]]
+
+           if (commits_pageInfo.get("hasNextPage").get == true) {
+             endCursorMap += (repoName.toString -> Map("commits" -> commits_pageInfo.get("endCursor").get.toString))
+           }
+
+           println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
+
+           repoInfoList = Map(repoName.toString -> Map("commitsCount" -> commitsCount.toString)) :: repoInfoList
+           repoInfoList = Map(repoName.toString -> Map("authors" -> authorList)) :: repoInfoList
          }
-
-         val commits_pageInfo = history.get("pageInfo").get.asInstanceOf[Map[String, Any]]
-
-         if (commits_pageInfo.get("hasNextPage").get == true) {
-            endCursorMap += (repoName.toString -> Map("commits" -> commits_pageInfo.get("endCursor").get.toString))
+         else {
+           println("Commits Info -> " + "Count: 0, Authors: List()")
          }
-
-         println("Commits Info -> " + "Count: " + commitsCount + ", Authors: " + authorList)
-
-         repoInfoList = Map(repoName.toString -> Map("commitsCount" -> commitsCount.toString)) :: repoInfoList
-         repoInfoList = Map(repoName.toString -> Map("authors" -> authorList)) :: repoInfoList
-
        }
 
        //Getting issues info
