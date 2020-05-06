@@ -1,4 +1,6 @@
 import java.io.{ByteArrayOutputStream, PrintStream}
+
+import Driver.printData
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -40,7 +42,7 @@ object UnitTests {
       .withLanguages(List(LanguageInfo.NAME))
       .build
 
-    assertEquals("query{repository(name: \\\"Python\\\", owner: \\\"TheAlgorithms\\\") {createdAt name description  languages (first:100){totalCount  nodes {name} pageInfo{endCursor hasNextPage}} stargazers (first:100){totalCount  nodes {name email} pageInfo{endCursor hasNextPage}}}}", query2.queryVal);
+    assertEquals("query{repository(name: \\\"Python\\\", owner: \\\"TheAlgorithms\\\") {createdAt name description  languages (first:" + conf.getInt("LIMIT") + "){totalCount  nodes {name} pageInfo{endCursor hasNextPage}} stargazers (first:" + conf.getInt("LIMIT") + "){totalCount  nodes {name email} pageInfo{endCursor hasNextPage}}}}", query2.queryVal);
 
     val query3: QueryCommand = QueryBuilder()
       .withRepoOwner("practice", "rtonki2", List())
@@ -52,8 +54,8 @@ object UnitTests {
       .withLanguages(List(LanguageInfo.NAME))
       .build
 
-    assertEquals("query{repository(name: \\\"practice\\\", owner: \\\"rtonki2\\\") {createdAt name description  languages (first:100){totalCount  nodes {name} pageInfo{endCursor hasNextPage}} stargazers (first:100){totalCount  nodes {name email} pageInfo{endCursor hasNextPage}}" +
-      " commits: defaultBranchRef{target{... on Commit{  history (first:100){totalCount  nodes {author{name}} pageInfo{endCursor hasNextPage}}}}} issues (first:100){totalCount  nodes {author{login}} pageInfo{endCursor hasNextPage}}}}", query3.queryVal);
+    assertEquals("query{repository(name: \\\"practice\\\", owner: \\\"rtonki2\\\") {createdAt name description  languages (first:" + conf.getInt("LIMIT") + "){totalCount  nodes {name} pageInfo{endCursor hasNextPage}} stargazers (first:" + conf.getInt("LIMIT") + "){totalCount  nodes {name email} pageInfo{endCursor hasNextPage}}" +
+      " commits: defaultBranchRef{target{... on Commit{  history (first:" + conf.getInt("LIMIT") + "){totalCount  nodes {author{name}} pageInfo{endCursor hasNextPage}}}}} issues (first:" + conf.getInt("LIMIT") + "){totalCount  nodes {author{login}} pageInfo{endCursor hasNextPage}}}}", query3.queryVal);
   }
 
   //test that properly executed querys return without error
@@ -86,7 +88,7 @@ object UnitTests {
         .build
     }
 
-    assertFalse(console1.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
+    assertFalse(console1.toString().isBlank)
 
 
     val console2: ByteArrayOutputStream = new ByteArrayOutputStream
@@ -97,7 +99,7 @@ object UnitTests {
         .withAuth(github)
         .build
     }
-    assertFalse(console2.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
+    assertFalse(console2.toString().isBlank)
 
     val console3: ByteArrayOutputStream = new ByteArrayOutputStream
     Console.withOut(console3) {
@@ -110,7 +112,7 @@ object UnitTests {
         .withLanguages(List(LanguageInfo.NAME))
         .build
     }
-    assertFalse(console3.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
+    assertFalse(console3.toString().isBlank)
 
     val console4: ByteArrayOutputStream = new ByteArrayOutputStream
     Console.withOut(console4) {
@@ -135,7 +137,7 @@ object UnitTests {
       assertEquals(true, fail)
     }
 
-    //assertTrue(console4.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}"))
+    assertTrue(console4.toString().isBlank())
   }
 
   //test that output data matches the expected values for a given repository
@@ -171,7 +173,7 @@ object UnitTests {
     //strip console output down to important values
     if(console1.toString().contains("Repo Info"))
     {
-      val trimmed = console1.toString().split("\n").apply(1)
+      val trimmed = console1.toString().split("\n").apply(0)
 
       val name = trimmed.split(":").apply(1)
       assertEquals(name, " linux, Created")
@@ -197,7 +199,7 @@ object UnitTests {
     //strip console output down to important values
     if(console2.toString().contains("Repo Info"))
     {
-      val trimmed = console2.toString().split("\n").apply(2)
+      val trimmed = console2.toString().split("\n").apply(1)
 
       val count = trimmed.split(":").apply(1)
       assertEquals(" 1, Nodes", count)
@@ -221,7 +223,7 @@ object UnitTests {
     //strip console output down to important values
     if(console3.toString().contains("Repo Info"))
     {
-      val trimmed = console3.toString().split("\n").apply(2)
+      val trimmed = console3.toString().split("\n").apply(1)
 
       val count = trimmed.split(":").apply(1)
       assertEquals(" 19, Authors", count)
@@ -245,7 +247,7 @@ object UnitTests {
     //strip console output down to important values
     if(console4.toString().contains("Repo Info"))
     {
-      val trimmed = console4.toString().split("\n").apply(2)
+      val trimmed = console4.toString().split("\n").apply(1)
 
       val count = trimmed.split(":").apply(1)
       assertEquals(" 0, Nodes", count)
@@ -268,7 +270,7 @@ object UnitTests {
     //strip console output down to important values
     if(console5.toString().contains("Repo Info"))
     {
-      val trimmed = console5.toString().split("\n").apply(2)
+      val trimmed = console5.toString().split("\n").apply(1)
 
       val count = trimmed.split(":").apply(1)
       assertEquals(" 20, Type of Languages", count)
@@ -282,9 +284,9 @@ object UnitTests {
     assertEquals(false, fail)
   }
 
-  //Test handling of multiple returned pages of information
+  //Test filtering functionality
   @Test
-  def testPagination(): Unit = {
+  def testFilter(): Unit = {
     val c = ConfigFactory.load()
     val conf = c.getConfig("GQL")
 
@@ -305,17 +307,16 @@ object UnitTests {
       val query: QueryCommand = QueryBuilder()
         .withRepoOwner("linux", "torvalds", List())
         .withAuth(github)
-        .withStarGazers()
+        .withCommits(List(CommitInfo.AUTHOR))
         .build
 
+      printData(query.filter(Commit(CommitInfo.TOTAL_COUNT, (x:Int) => x > 1000)))
     }
 
-    //strip console output down to important values
-    if (console1.toString().contains("Repo Info")) {
 
-      assertTrue(console1.toString().contains("Page 2"))
-      assertTrue(console1.toString().contains("Page 3"))
-      assertTrue(console1.toString().contains("Page 5"))
+    if (console1.toString().contains("Repo Info")) {
+      //filtered info starts with "Repo -> <name>" if not filtered out
+      assertTrue(console1.toString().contains("Repo -> linux"))
     }
     else {
       fail = true;
@@ -327,17 +328,19 @@ object UnitTests {
       val query2: QueryCommand = QueryBuilder()
         .withRepoOwner("linux", "torvalds", List())
         .withAuth(github)
-        .withCommits()
+        .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+        .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
+        .withCommits(List(CommitInfo.AUTHOR))
+        .withIssues(List(IssueInfo.AUTHOR))
+        .withLanguages(List(LanguageInfo.NAME))
         .build
 
+      printData(query2.filter(Commit(CommitInfo.TOTAL_COUNT, (x:Int) => x > 2000000)))
     }
 
     //strip console output down to important values
     if (console2.toString().contains("Repo Info")) {
-
-      assertTrue(console2.toString().contains("Page 2"))
-      assertTrue(console2.toString().contains("Page 3"))
-      assertTrue(console2.toString().contains("Page 5"))
+      assertFalse(console2.toString().contains("Repo -> linux"))
     }
     else {
       fail = true;
@@ -349,16 +352,43 @@ object UnitTests {
       val query3: QueryCommand = QueryBuilder()
         .withRepoOwner("linux", "torvalds", List())
         .withAuth(github)
-        .withLanguages()
+        .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+        .withCommits(List(CommitInfo.AUTHOR))
+        .withIssues(List(IssueInfo.AUTHOR))
+        .withLanguages(List(LanguageInfo.NAME))
         .build
+
+      printData(query3.filter(Languages(LanguageInfo.NAME, (x:String) => x == "C++")))
 
     }
 
     //strip console output down to important values
     if (console3.toString().contains("Repo Info")) {
+      assertTrue(console3.toString().contains("Repo -> linux"))
+    }
+    else {
+      fail = true;
+    }
 
-      assertTrue(console3.toString().contains("Page 2"))
-      assertTrue(console3.toString().contains("Page 3"))
+    val console4: ByteArrayOutputStream = new ByteArrayOutputStream
+    Console.withOut(console4) {
+
+      val query4: QueryCommand = QueryBuilder()
+        .withRepoOwner("linux", "torvalds", List())
+        .withAuth(github)
+        .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
+        .withCommits(List(CommitInfo.AUTHOR))
+        .withIssues(List(IssueInfo.AUTHOR))
+        .withLanguages(List(LanguageInfo.NAME))
+        .build
+
+      printData(query4.filter(Language(LanguageInfo.NAME, (x:String) => x == "Scala")))
+
+    }
+
+    //strip console output down to important values
+    if (console4.toString().contains("Repo Info")) {
+      assertFalse(console4.toString().contains("Repo -> linux"))
     }
     else {
       fail = true;
@@ -411,7 +441,7 @@ object UnitTests {
       val query3: QueryCommand = QueryBuilder()
         .withRepoOwner("practice", "rtonki2", List())
         .withAuth(github)
-        .withLanguage(List(LanguageInfo.NAME))
+        .withCommits()
         .build
     }
     assertFalse(console3.toString().contains("{\"message\":\"Problems parsing JSON\",\"documentation_url\":\"https://developer.github.com/v4\"}")) //error
@@ -439,10 +469,8 @@ object UnitTests {
         .withAuth(github)
         .withLanguages(List(LanguageInfo.NAME))
         .withStarGazers(List(UserInfo.NAME, UserInfo.EMAIL))
-        .withCollaborators(List(UserInfo.NAME, UserInfo.EMAIL))
         .withCommits(List(CommitInfo.AUTHOR))
         .withIssues(List(IssueInfo.AUTHOR))
-        .withLanguage(List(LanguageInfo.NAME))
         .build
     }
 

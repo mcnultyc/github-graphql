@@ -51,8 +51,8 @@ object Driver {
         .withLanguages(List(LanguageInfo.NAME))
         .build
 
-      // Filter repos were the language Java is used
       printData(query.filter(Commit(CommitInfo.TOTAL_COUNT, (x:Int) => x > 100)))
+
     }
     catch{
       // Check for github connection exception and graphql errors
