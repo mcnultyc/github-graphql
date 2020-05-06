@@ -4,33 +4,6 @@ import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
 import com.typesafe.config.ConfigFactory
 import org.slf4j.{Logger, LoggerFactory}
 
-// Fields for repository info, used for filtering
-sealed trait Fieldss[T]{
-  def pred: (T) => Boolean
-  def field: String
-  def name: String
-}
-
-//abstract class Fields(name:String, field:String, pred:(String)=>Boolean){}
-
-// Case class with predicate for 'commits'
-case class Committ[T](info:String, pred:(T) => Boolean, name:String = "commits")
-  extends Fieldss[T]{
-  override val field = info.toString
-}
-
-class Test{
-
-  def filter[T](f: Fieldss[T]): Unit ={
-    val i: String = "carlos"
-    if(i.isInstanceOf[T]){
-      val convert: T = i.asInstanceOf[T]
-      if(f.pred(convert)){
-        println("STILL WORKS")
-      }
-    }
-  }
-}
 
 object Driver {
 
@@ -79,7 +52,7 @@ object Driver {
         .build
 
       // Filter repos were the language Java is used
-      printData(query.filter(Languages(LanguageInfo.TOTAL_COUNT, (x:Int) => x < 2)))
+      printData(query.filter(Commit(CommitInfo.TOTAL_COUNT, (x:Int) => x > 100)))
     }
     catch{
       // Check for github connection exception and graphql errors
