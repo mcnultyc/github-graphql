@@ -13,7 +13,7 @@ object Driver {
 
   def printData(repos: List[(String, Map[String, Any])], max: Int = 3): Unit ={
 
-    logger.info("printing filtered data")
+    logger.info("PRINTING FILTERED DATA...")
 
     println("\nFILTERED DATA: ")
     println("-------------------------------------")
@@ -51,7 +51,7 @@ object Driver {
         .withLanguages(List(LanguageInfo.NAME))
         .build
 
-      printData(query.filter(Commit(CommitInfo.TOTAL_COUNT, (x:Int) => x > 100)))
+      printData(query.filter(Commit(CommitInfo.TOTAL_COUNT, (x:Int) => x > 100 && x <= 1000)))
 
     }
     catch{
