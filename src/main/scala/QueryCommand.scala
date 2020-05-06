@@ -131,13 +131,7 @@ case class StarGazers[T](info:UserInfo, pred:(T) => Boolean, name:String ="starg
 
 // Case class with predicate for 'languages'
 case class Languages[T](info:LanguageInfo, pred:(T) => Boolean, name:String="languages")
-        extends Fields[T]{
-  override val field = info.toString
-}
-
-// Case class with predicate for 'primaryLanguage'
-case class Language[T](info:LanguageInfo, pred:(T) => Boolean, name:String="primaryLanguage")
-        extends Fields[T]{
+        extends Fields[T] {
   override val field = info.toString
 }
 
@@ -256,15 +250,15 @@ class QueryCommand(repo: String = "",
     headers.foreach(x => request.addHeader(x._1, x._2))
 
 
-    logger.info(s"""creating http post with entity: {"query":"$query"}""")
+    logger.info(s"""CREATING HTTP POST WITH ENTITY: {"query":"$query"}""")
     // Set http entity for request
     request.setEntity(entity)
 
-    logger.info("executing http post request")
+    logger.info("EXECUTING HTTP POST REQUEST...")
     // Execute request
     val response = client.execute(request)
     // Log http status line from response
-    logger.info(s"http status: ${response.getStatusLine}")
+    logger.info(s"HTTP STATUS: ${response.getStatusLine}")
 
     // Get json from response content
     val json =
@@ -291,16 +285,14 @@ class QueryCommand(repo: String = "",
 
     // Get data parsed from json
     val (_, repoInfo) = parseResponse(json)
-    println(repoInfo)
     // Restructure data for easier use
     data = restructure(repoInfo)
-    println(data)
   }
 
   private def parseResponse(response: String): (scala.collection.mutable.Map[String, Map[String, String]], List[Map[String, Map[String, Any]]]) ={
 
-
-    logger.info("parsing json response")
+    logger.info("PARSING JSON RESPONSE...")
+    logger.info("PRINTING PARSED DATA...")
 
     implicit val formats = DefaultFormats
 
@@ -961,8 +953,7 @@ class QueryCommand(repo: String = "",
     def args(after: String = "", first:Int = 100): String =
       if(after.trim == "") s"(first:$first)" else s"""(first:$first, after: \\"$after\\")"""
 
-    logger.info(s"creating graph-ql query: # cursors: ${cursors.size}, pagination = $paginate")
-
+    logger.info(s"CREATING GRAPH-QL QUERY: # CURSORS: ${cursors.size}, PAGINATION = $paginate")
 
     val config: Config = ConfigFactory.load().getConfig("GQL")
 
